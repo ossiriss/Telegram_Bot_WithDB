@@ -1,5 +1,7 @@
 package model;
 
+import dao.Expense;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -116,6 +118,51 @@ public class DBHelper {
         } catch (SQLException e) {
             e.printStackTrace();
             System.out.println("something goes wrong in 'addUserToTrip'");
+        }
+    }
+
+    public static ArrayList<Expense> getExpensesForUser(int userId, long tripId){
+        ArrayList<Expense> result = new ArrayList<>();
+
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "select ID, expense_datetime, sum, cur, comment  " +
+                    "from expenses where TripID = " + tripId + " " +
+                    "and userID = " + userId + " " +
+                    "and + deletedFlag = 0";
+            Statement st = conn.createStatement();
+            ResultSet rs = st.executeQuery(query);
+            while (rs.next()) {
+                int id = rs.getInt("ID");
+                Timestamp date = rs.getTimestamp("expense_datetime");
+                double sum = rs.getDouble("sum");
+                String cur = rs.getString("cur");
+                String comment = rs.getString("comment");
+                result.add(new Expense(sum, cur, comment, id, date.toLocalDateTime()));
+            }
+            rs.close();
+            st.close();
+        } catch (SQLException e) {
+            System.out.println("something goes wrong in 'getExpensesForUser'");
+        }
+
+        return result;
+    }
+
+    public static void removeUserFromTrip(int userId, long tripId){
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "update users2trips " +
+                    "set deletedFlag = 1 " +
+                    "where ID_Telegram = ? " +
+                    "and TripID = ?";
+            PreparedStatement preparedStmt = conn.prepareStatement(query);
+
+            preparedStmt.setInt(1, userId);
+            preparedStmt.setLong(2, tripId);
+
+            preparedStmt.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something goes wrong in 'removeUserFromTrip'");
         }
     }
 

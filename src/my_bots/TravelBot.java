@@ -9,8 +9,6 @@ import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
-import java.util.ArrayList;
-
 /**
  * Created by Boris on 26-Sep-16.
  */
@@ -49,9 +47,9 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = getHelp();
             else if (messageText.toUpperCase().matches(Command.JUMPIN.toString()))
                 answerText = addTraveler(message.getFrom().getFirstName(), message.getFrom().getLastName(), userID, messageText, chatID);
-            /*else if (messageText.equalsIgnoreCase(Command.GETOUT.toString()))
-                answerText = removeTraveler(userID);
-            else if ((messageText.toUpperCase().matches(Command.EXP.toString() + " \\d+\\.?\\d* ?[A-Z]{3}") ||
+            else if (messageText.equalsIgnoreCase(Command.GETOUT.toString()))
+                answerText = removeTraveler(userID, chatID);
+            /*else if ((messageText.toUpperCase().matches(Command.EXP.toString() + " \\d+\\.?\\d* ?[A-Z]{3}") ||
                     (messageText.toUpperCase().matches(Command.EXP.toString() + " \\d+\\.?\\d* ?[A-Z]{3} .*"))))
                 answerText = expense(userID, messageText, message.getFrom().getFirstName());
             else if (messageText.equalsIgnoreCase(Command.SHOWEXP.toString()) || messageText.toUpperCase().matches
@@ -72,6 +70,20 @@ public class TravelBot extends TelegramLongPollingBot {
         }
         
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String removeTraveler(int userID, long chatID) {
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip";
+        }
+        if (!DBHelper.getExpensesForUser(userID, chatID).isEmpty()){
+            return "You can not leave because you have active expenses";
+        }
+        else {
+            DBHelper.removeUserFromTrip(userID, chatID);
+        }
+
+        return "traveler removed from current trip";
     }
 
     private String addTraveler(String firstName, String lastName, int userID, String messageText, long chatID) {
