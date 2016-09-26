@@ -1,5 +1,6 @@
 package my_bots;
 
+import model.MyConstants;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
@@ -9,16 +10,16 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 public class TravelBot extends TelegramLongPollingBot {
     @Override
     public String getBotToken() {
-        return null;
+        return MyConstants.BOT_TOKEN;
     }
 
     @Override
     public void onUpdateReceived(Update update) {
-
+        System.out.println(update.getMessage().getText());
     }
 
     @Override
     public String getBotUsername() {
-        return null;
+        return MyConstants.BOT_USERNAME;
     }
 }
