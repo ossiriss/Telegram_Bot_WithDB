@@ -10,11 +10,11 @@ import java.util.Calendar;
  * Created by Boris on 26-Sep-16.
  */
 public class DBHelper {
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) throws Exception {
 
     }
 
-    public static ArrayList<Integer> getUsersList(){
+    public static ArrayList<Integer> getUsersList() throws DBException{
         ArrayList<Integer> result = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
@@ -28,13 +28,15 @@ public class DBHelper {
             rs.close();
             st.close();
         } catch (SQLException e) {
-            System.out.println("something goes wrong in 'getUsersList'");
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'getUsersList'");
+            throw new DBException("something gone wrong in 'getUsersList'");
         }
 
         return result;
     }
 
-    public static void addUser(int userId, String name, String surname){
+    public static void addUser(int userId, String name, String surname) throws DBException{
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "insert into users(ID_Telegram, Name, Surname) values(?,?,?)";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
@@ -46,11 +48,12 @@ public class DBHelper {
             preparedStmt.execute();
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("something goes wrong in 'addUser'");
+            System.out.println("something gone wrong in 'addUser'");
+            throw new DBException("something gone wrong in 'addUser'");
         }
     }
 
-    public static void createTrip(long chatId, int creatorId){
+    public static void createTrip(long chatId, int creatorId) throws DBException{
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "insert into trips(Telegram_chat_id, createDate, Creator_ID) values(?,?,?)";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
@@ -62,11 +65,12 @@ public class DBHelper {
             preparedStmt.execute();
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("something goes wrong in 'CreateTrip'");
+            System.out.println("something gone wrong in 'CreateTrip'");
+            throw new DBException("something gone wrong in 'CreateTrip'");
         }
     }
 
-    public static ArrayList<Long> getTripsList(){
+    public static ArrayList<Long> getTripsList() throws DBException {
         ArrayList<Long> result = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
@@ -80,13 +84,14 @@ public class DBHelper {
             rs.close();
             st.close();
         } catch (SQLException e) {
-            System.out.println("something goes wrong in 'getTripsList'");
+            System.out.println("something gone wrong in 'getTripsList'");
+            throw new DBException("something gone wrong in 'getTripsList'");
         }
 
         return result;
     }
 
-    public static ArrayList<Integer> getUsersInTrip(long tripId){
+    public static ArrayList<Integer> getUsersInTrip(long tripId) throws DBException {
         ArrayList<Integer> result = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
@@ -100,13 +105,14 @@ public class DBHelper {
             rs.close();
             st.close();
         } catch (SQLException e) {
-            System.out.println("something goes wrong in 'getUsersInTrip'");
+            System.out.println("something gone wrong in 'getUsersInTrip'");
+            throw new DBException("something gone wrong in 'getUsersInTrip'");
         }
 
         return result;
     }
 
-    public static void addUserToTrip(int userId, long tripId){
+    public static void addUserToTrip(int userId, long tripId) throws DBException {
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "insert into users2trips(ID_Telegram, TripID) values(?,?)";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
@@ -117,11 +123,12 @@ public class DBHelper {
             preparedStmt.execute();
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("something goes wrong in 'addUserToTrip'");
+            System.out.println("something gone wrong in 'addUserToTrip'");
+            throw new DBException("something gone wrong in 'addUserToTrip'");
         }
     }
 
-    public static ArrayList<Expense> getExpensesForUser(int userId, long tripId){
+    public static ArrayList<Expense> getExpensesForUser(int userId, long tripId) throws DBException {
         ArrayList<Expense> result = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
@@ -142,13 +149,14 @@ public class DBHelper {
             rs.close();
             st.close();
         } catch (SQLException e) {
-            System.out.println("something goes wrong in 'getExpensesForUser'");
+            System.out.println("something gone wrong in 'getExpensesForUser'");
+            throw new DBException("something gone wrong in 'getExpensesForUser'");
         }
 
         return result;
     }
 
-    public static void removeUserFromTrip(int userId, long tripId){
+    public static void removeUserFromTrip(int userId, long tripId) throws DBException {
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "update users2trips " +
                     "set deletedFlag = 1 " +
@@ -162,8 +170,27 @@ public class DBHelper {
             preparedStmt.execute();
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("something goes wrong in 'removeUserFromTrip'");
+            System.out.println("something gone wrong in 'removeUserFromTrip'");
+            throw new DBException("something gone wrong in 'removeUserFromTrip'");
         }
     }
 
+    public static void addExpense(double numAmount, String currency, String comment, int userID, long tripID) throws DBException {
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "insert into expenses(sum, cur, comment, tripID, userID) values(?,?,?,?,?)";
+            PreparedStatement preparedStmt = conn.prepareStatement(query);
+
+            preparedStmt.setDouble(1, numAmount);
+            preparedStmt.setString(2, currency);
+            preparedStmt.setString(3, comment);
+            preparedStmt.setLong(4, tripID);
+            preparedStmt.setInt(5, userID);
+
+            preparedStmt.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'addExpense'");
+            throw new DBException("something gone wrong in 'addExpense'");
+        }
+    }
 }
