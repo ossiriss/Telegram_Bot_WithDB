@@ -44,4 +44,32 @@ public class Expense {
     public LocalDateTime getDate() {
         return date;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Expense expense = (Expense) o;
+
+        if (Double.compare(expense.sum, sum) != 0) return false;
+        if (id != expense.id) return false;
+        if (currency != null ? !currency.equals(expense.currency) : expense.currency != null) return false;
+        if (description != null ? !description.equals(expense.description) : expense.description != null) return false;
+        return date != null ? date.equals(expense.date) : expense.date == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result;
+        long temp;
+        temp = Double.doubleToLongBits(sum);
+        result = (int) (temp ^ (temp >>> 32));
+        result = 31 * result + (currency != null ? currency.hashCode() : 0);
+        result = 31 * result + (description != null ? description.hashCode() : 0);
+        result = 31 * result + (date != null ? date.hashCode() : 0);
+        result = 31 * result + id;
+        return result;
+    }
 }

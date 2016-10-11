@@ -106,7 +106,7 @@ public class TravelBot extends TelegramLongPollingBot {
         if (!DBHelper.getTripsList().contains(chatID)){
             return "no such trip";
         }
-        if (!DBHelper.getExpensesForUser(userID, chatID).isEmpty()){
+        if (DBHelper.getExpensesFromTrip(chatID).containsValue(userID)){
             return "You can not leave because you have active expenses";
         }
         else {

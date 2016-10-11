@@ -5,6 +5,7 @@ import dao.Expense;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 
 /**
  * Created by Boris on 26-Sep-16.
@@ -128,13 +129,12 @@ public class DBHelper {
         }
     }
 
-    public static ArrayList<Expense> getExpensesForUser(int userId, long tripId) throws DBException {
-        ArrayList<Expense> result = new ArrayList<>();
+    public static HashMap<Expense, Integer> getExpensesFromTrip(long tripId) throws DBException {
+        HashMap<Expense, Integer> result = new HashMap<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "select ID, expense_datetime, sum, cur, comment  " +
+            String query = "select ID, expense_datetime, sum, cur, comment, userID " +
                     "from expenses where TripID = " + tripId + " " +
-                    "and userID = " + userId + " " +
                     "and + deletedFlag = 0";
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
@@ -144,7 +144,8 @@ public class DBHelper {
                 double sum = rs.getDouble("sum");
                 String cur = rs.getString("cur");
                 String comment = rs.getString("comment");
-                result.add(new Expense(sum, cur, comment, id, date.toLocalDateTime()));
+                int userID = rs.getInt("userID");
+                result.put(new Expense(sum, cur, comment, id, date.toLocalDateTime()), userID);
             }
             rs.close();
             st.close();
