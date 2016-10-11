@@ -66,11 +66,9 @@ public class TravelBot extends TelegramLongPollingBot {
             else if (messageText.toUpperCase().matches(Command.DELEXP.toString() + " \\d+"))
                 answerText = removeExpense(messageText, userID, chatID);
             else if (messageText.toUpperCase().matches(Command.CALC.toString()))
-                answerText = calculateExpenses(messageText, userID, chatID);
-            /*else if (messageText.toUpperCase().matches(Command.CALCTOTAL.toString()))
-                answerText = calculateTotalExpenses(messageText, userID);
-            else if (messageText.toUpperCase().matches(Command.ENDTRIP.toString() + " \\S+ \\S+"))
-                answerText = endTrip(messageText, userID);*/
+                answerText = calculateExpenses(chatID);
+            else if (messageText.toUpperCase().matches(Command.CALCTOTAL.toString()))
+                answerText = calculateTotalExpenses(chatID);
             else answerText = "Wrong command";
         } catch (Exception e) {
             e.printStackTrace();
@@ -80,7 +78,21 @@ public class TravelBot extends TelegramLongPollingBot {
         sendMessage(answerText, message.getChatId().toString());
     }
 
-    private String calculateExpenses(String messageText, int userID, long chatID) throws DBException {
+    private String calculateTotalExpenses(long chatID) throws DBException {
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+        TreeMap<Expense, Traveler> map = new TreeMap<>(Collections.reverseOrder());
+        map.putAll(DBHelper.getExpensesFromTrip(chatID));
+
+        if (map.isEmpty()){
+            return "Error: no expenses in current trip";
+        }
+
+        return Calculator.getTotalExpenses(map);
+    }
+
+    private String calculateExpenses(long chatID) throws DBException {
         if (!DBHelper.getTripsList().contains(chatID)){
             return "no such trip, you need to enter trip first";
         }

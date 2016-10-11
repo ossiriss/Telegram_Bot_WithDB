@@ -114,4 +114,54 @@ public class Calculator {
                 .sorted(Comparator.comparing(Map.Entry::getValue, c))
                 .forEachOrdered(e -> m.put(e.getKey(), e.getValue()));
     }
+
+    public static String getTotalExpenses(TreeMap<Expense, Traveler> expenses) {
+        Set<Traveler> travelers = new HashSet<>();
+        for (Map.Entry<Expense, Traveler> entry: expenses.entrySet()) {
+            travelers.add(entry.getValue());
+        }
+        
+        String result = "Total spent: ";
+        HashMap<String, Double> total = new HashMap<String, Double>();
+        for (Expense e : expenses.keySet()) {
+            if (total.containsKey(e.getCurrency()))
+                total.put(e.getCurrency(), e.getSum() + total.get(e.getCurrency()));
+            else
+                total.put(e.getCurrency(), e.getSum());
+        }
+        for (Map.Entry<String, Double> entry: total.entrySet()) {
+            result += entry.getValue() + entry.getKey() + ", ";
+            entry.setValue(entry.getValue()/travelers.size());   //we live here "total for each"
+        }
+        result = result.replaceAll(", $", "");
+        result += "\n";
+
+
+        for (Traveler t : travelers) {
+            String sTotal = t.getFirstName() + " " + t.getLastName()  + " must pay: ";
+            HashMap<String, Double> totalForTraveler = new HashMap<String, Double>();
+            for (String cur : total.keySet()) {
+                totalForTraveler.put(cur, 0.);   //filling all currencies with zeros
+            }
+            for (Map.Entry<Expense, Traveler> entry: expenses.entrySet()) {   //fill map with total spends for traveler
+                Traveler traveler = entry.getValue();
+                Expense expense = entry.getKey();
+                if (t == traveler){
+                    totalForTraveler.put(expense.getCurrency(), expense.getSum() + totalForTraveler.get
+                            (expense.getCurrency()));
+                }
+            }
+            for (Map.Entry<String, Double> entry: totalForTraveler.entrySet()) {
+                String cur = entry.getKey();
+                double amount = entry.getValue();
+                double sum = Math.round((total.get(cur) - amount)*100.)/100.;
+                if (Math.abs(sum) > 0.01)
+                    sTotal += sum + cur + ", ";
+            }
+            sTotal = sTotal.replaceAll(", $", "");
+            result += sTotal + "\n";
+        }
+
+        return result;
+    }
 }
