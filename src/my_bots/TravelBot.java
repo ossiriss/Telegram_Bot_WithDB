@@ -66,9 +66,9 @@ public class TravelBot extends TelegramLongPollingBot {
             else if (messageText.equalsIgnoreCase(Command.SHOWEXP.toString()) || messageText.toUpperCase().matches
                     (Command.SHOWEXP.toString() + " \\d*"))
                 answerText = showExpenses(messageText, chatID);
-            /*else if (messageText.toUpperCase().matches(Command.DELEXP.toString() + " \\d+"))
-                answerText = removeExpense(messageText, userID);
-            else if (messageText.toUpperCase().matches(Command.CALC.toString()))
+            else if (messageText.toUpperCase().matches(Command.DELEXP.toString() + " \\d+"))
+                answerText = removeExpense(messageText, userID, chatID);
+            /*else if (messageText.toUpperCase().matches(Command.CALC.toString()))
                 answerText = calculateExpenses(messageText, userID);
             else if (messageText.toUpperCase().matches(Command.CALCTOTAL.toString()))
                 answerText = calculateTotalExpenses(messageText, userID);
@@ -81,6 +81,19 @@ public class TravelBot extends TelegramLongPollingBot {
         }
         
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String removeExpense(String messageText, int userID, long chatID) throws DBException {
+        int idToRemove = Integer.parseInt(messageText.substring(Command.DELEXP.toString().length()+1));
+        Expense expense = DBHelper.getExpenseById(idToRemove, chatID);
+        if (expense == null)
+            return "Expense with such id not found";
+        if (expense.getUserID() != userID){
+            return "Cannot remove expense. Not enough rights";
+        }
+        else DBHelper.removeExpense(expense, chatID) ;
+
+        return "Expense id " + idToRemove + " removed";
     }
 
     private String showExpenses(String messageText, long chatID) throws DBException {

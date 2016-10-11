@@ -151,7 +151,7 @@ public class DBHelper {
                 int userID = rs.getInt("userID");
                 String name = rs.getString("Name");
                 String surname = rs.getString("Surname");
-                result.put(new Expense(sum, cur, comment, id, date.toLocalDateTime()), new Traveler(name, surname, userID));
+                result.put(new Expense(sum, cur, comment, id, date.toLocalDateTime(), userID), new Traveler(name, surname, userID));
             }
             rs.close();
             st.close();
@@ -199,6 +199,55 @@ public class DBHelper {
             e.printStackTrace();
             System.out.println("something gone wrong in 'addExpense'");
             throw new DBException("something gone wrong in 'addExpense'");
+        }
+    }
+
+    public static Expense getExpenseById(int userID, long chatID) throws DBException {
+        Expense result = null;
+
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "SELECT ID, expense_datetime, sum, cur, comment, userID FROM travelbase.expenses" +
+                    " where tripID = " + chatID +
+                    " and id = " + userID +
+                    " and + deletedFlag = 0";
+            Statement st = conn.createStatement();
+            ResultSet rs = st.executeQuery(query);
+            while (rs.next()) {
+                int id = rs.getInt("ID");
+                Timestamp date = rs.getTimestamp("expense_datetime");
+                double sum = rs.getDouble("sum");
+                String cur = rs.getString("cur");
+                String comment = rs.getString("comment");
+                int user = rs.getInt("userID");
+                result = new Expense(sum, cur, comment, id, date.toLocalDateTime(), user);
+            }
+            rs.close();
+            st.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'getUsersList'");
+            throw new DBException("something gone wrong in 'getUsersList'");
+        }
+
+        return result;
+    }
+
+    public static void removeExpense(Expense expense, long chatID) throws DBException {
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "update expenses " +
+                    "set deletedFlag = 1 " +
+                    "where ID = ? " +
+                    "and TripID = ?";
+            PreparedStatement preparedStmt = conn.prepareStatement(query);
+
+            preparedStmt.setInt(1, expense.getId());
+            preparedStmt.setLong(2, chatID);
+
+            preparedStmt.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'removeUserFromTrip'");
+            throw new DBException("something gone wrong in 'removeUserFromTrip'");
         }
     }
 }
