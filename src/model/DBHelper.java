@@ -1,6 +1,7 @@
 package model;
 
 import dao.Expense;
+import dao.Traveler;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -85,6 +86,7 @@ public class DBHelper {
             rs.close();
             st.close();
         } catch (SQLException e) {
+            e.printStackTrace();
             System.out.println("something gone wrong in 'getTripsList'");
             throw new DBException("something gone wrong in 'getTripsList'");
         }
@@ -106,6 +108,7 @@ public class DBHelper {
             rs.close();
             st.close();
         } catch (SQLException e) {
+            e.printStackTrace();
             System.out.println("something gone wrong in 'getUsersInTrip'");
             throw new DBException("something gone wrong in 'getUsersInTrip'");
         }
@@ -129,13 +132,14 @@ public class DBHelper {
         }
     }
 
-    public static HashMap<Expense, Integer> getExpensesFromTrip(long tripId) throws DBException {
-        HashMap<Expense, Integer> result = new HashMap<>();
+    public static HashMap<Expense, Traveler> getExpensesFromTrip(long tripId) throws DBException {
+        HashMap<Expense, Traveler> result = new HashMap<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "select ID, expense_datetime, sum, cur, comment, userID " +
-                    "from expenses where TripID = " + tripId + " " +
-                    "and + deletedFlag = 0";
+            String query = "select ID, expense_datetime, sum, cur, comment, userID, Name, Surname " +
+                    "from expenses, users where TripID = " + tripId +
+                    " and userID = ID_Telegram" +
+                    " and + deletedFlag = 0";
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
             while (rs.next()) {
@@ -145,11 +149,14 @@ public class DBHelper {
                 String cur = rs.getString("cur");
                 String comment = rs.getString("comment");
                 int userID = rs.getInt("userID");
-                result.put(new Expense(sum, cur, comment, id, date.toLocalDateTime()), userID);
+                String name = rs.getString("Name");
+                String surname = rs.getString("Surname");
+                result.put(new Expense(sum, cur, comment, id, date.toLocalDateTime()), new Traveler(name, surname, userID));
             }
             rs.close();
             st.close();
         } catch (SQLException e) {
+            e.printStackTrace();
             System.out.println("something gone wrong in 'getExpensesForUser'");
             throw new DBException("something gone wrong in 'getExpensesForUser'");
         }

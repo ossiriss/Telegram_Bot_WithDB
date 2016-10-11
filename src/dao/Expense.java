@@ -6,7 +6,7 @@ import java.util.Date;
 /**
  * Created by Boris on 26-Sep-16.
  */
-public class Expense {
+public class Expense implements Comparable<Expense>{
     private double sum;
     private String currency;
     private String description;
@@ -71,5 +71,10 @@ public class Expense {
         result = 31 * result + (date != null ? date.hashCode() : 0);
         result = 31 * result + id;
         return result;
+    }
+
+    @Override
+    public int compareTo(Expense o) {
+        return date.compareTo(o.date);
     }
 }

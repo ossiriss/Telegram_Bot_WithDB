@@ -1,5 +1,7 @@
 package my_bots;
 
+import dao.Expense;
+import dao.Traveler;
 import model.Command;
 import model.DBException;
 import model.DBHelper;
@@ -10,6 +12,11 @@ import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,10 +49,10 @@ public class TravelBot extends TelegramLongPollingBot {
             sendMessage("not a command", message.getChatId().toString());
             return;
         }
-        /*if (message.getFrom().getLastName() == null){
+        if (message.getFrom().getLastName() == null){
             sendMessage("You must have Last Name in telegram to use this bot", message.getChatId().toString());
             return;
-        }*/
+        }
         try {
             if (messageText.equalsIgnoreCase(Command.HELP.toString()) || messageText.equalsIgnoreCase(Command.START.toString()))
                 answerText = getHelp();
@@ -56,10 +63,10 @@ public class TravelBot extends TelegramLongPollingBot {
             else if ((messageText.toUpperCase().matches(Command.EXP.toString() + " \\d+\\.?\\d* ?[A-Z]{3}") ||
                     (messageText.toUpperCase().matches(Command.EXP.toString() + " \\d+\\.?\\d* ?[A-Z]{3} .*"))))
                 answerText = expense(userID, chatID, messageText, message.getFrom().getFirstName());
-            /*else if (messageText.equalsIgnoreCase(Command.SHOWEXP.toString()) || messageText.toUpperCase().matches
+            else if (messageText.equalsIgnoreCase(Command.SHOWEXP.toString()) || messageText.toUpperCase().matches
                     (Command.SHOWEXP.toString() + " \\d*"))
-                answerText = showExpenses(messageText);
-            else if (messageText.toUpperCase().matches(Command.DELEXP.toString() + " \\d+"))
+                answerText = showExpenses(messageText, chatID);
+            /*else if (messageText.toUpperCase().matches(Command.DELEXP.toString() + " \\d+"))
                 answerText = removeExpense(messageText, userID);
             else if (messageText.toUpperCase().matches(Command.CALC.toString()))
                 answerText = calculateExpenses(messageText, userID);
@@ -69,10 +76,61 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = endTrip(messageText, userID);*/
             else answerText = "Wrong command";
         } catch (Exception e) {
+            e.printStackTrace();
             answerText = "Error, some command trowed exception: " + e.getMessage();
         }
         
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String showExpenses(String messageText, long chatID) throws DBException {
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+
+        TreeMap<Expense, Traveler> map = new TreeMap<>(Collections.reverseOrder());
+        map.putAll(DBHelper.getExpensesFromTrip(chatID));
+
+        if (map.isEmpty()){
+            return "Error: no expenses in current trip";
+        }
+
+        int days = -1;
+        String answer = "";
+        if (messageText.length() > Command.SHOWEXP.toString().length()){
+            days = Integer.parseInt(messageText.substring(Command.SHOWEXP.toString().length()+1));
+        }
+
+        DateTimeFormatter onlyDate = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        String sDate = null;
+
+        Iterator entries = map.entrySet().iterator();
+        while (entries.hasNext()) {
+            Map.Entry<Expense, Traveler> thisEntry = (Map.Entry)entries.next();
+            Expense expense = thisEntry.getKey(); Traveler traveler = thisEntry.getValue();
+
+            if (sDate != null && !sDate.equals(expense.getDate().format(onlyDate))) {
+
+                if (days == 1) {
+                    answer = "\n" + sDate + answer;
+                    return answer;
+                }
+                answer = "\n" + sDate + answer;
+                if (days > 1) days--;
+            }
+
+            if (expense.getDescription() != null) answer = expense.getDescription() + answer;
+
+            answer = "\n" + expense.getId() + ") " + traveler.getFirstName() + " " + traveler.getLastName().substring
+                    (0,1) + ". " + expense.getSum() + " " + expense.getCurrency() + " " + answer;
+
+            sDate = expense.getDate().format(onlyDate);
+            if (!entries.hasNext()){
+                answer = "\n" + sDate + answer;
+            }
+        }
+
+        return answer;
     }
 
     private String expense(int userID, long chatID, String messageText, String firstName) throws DBException {
@@ -106,12 +164,11 @@ public class TravelBot extends TelegramLongPollingBot {
         if (!DBHelper.getTripsList().contains(chatID)){
             return "no such trip";
         }
-        if (DBHelper.getExpensesFromTrip(chatID).containsValue(userID)){
-            return "You can not leave because you have active expenses";
+        for (Traveler t : DBHelper.getExpensesFromTrip(chatID).values()) {
+            if (t.getUserId() == userID) return "You can not leave because you have active expenses";
         }
-        else {
-            DBHelper.removeUserFromTrip(userID, chatID);
-        }
+
+        DBHelper.removeUserFromTrip(userID, chatID);
 
         return "traveler removed from current trip";
     }
@@ -137,7 +194,7 @@ public class TravelBot extends TelegramLongPollingBot {
         String message = "List of commands:\n";
         message += "/JUMPIN - jump in selected trip\n";
         message += "/GETOUT - get out of current trip\n";
-        message += "/EXP 'amount''currency' 'comment' - input expense; for example: /EXP 10.55EUR Comment. Comment - " +
+        message += "/EXP 'amount''currency' 'comment' - input expense; for example: '/EXP 10.55EUR Comment'. Comment - " +
                 "optional\n";
         message += "/SHOWEXP 'days' - show current expenses. days - opitonal\n";
         message += "/DELEXP 'exp id' - remove expense\n";
