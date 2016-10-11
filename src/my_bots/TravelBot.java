@@ -2,10 +2,7 @@ package my_bots;
 
 import dao.Expense;
 import dao.Traveler;
-import model.Command;
-import model.DBException;
-import model.DBHelper;
-import model.MyConstants;
+import model.*;
 import org.telegram.telegrambots.TelegramApiException;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Message;
@@ -68,9 +65,9 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = showExpenses(messageText, chatID);
             else if (messageText.toUpperCase().matches(Command.DELEXP.toString() + " \\d+"))
                 answerText = removeExpense(messageText, userID, chatID);
-            /*else if (messageText.toUpperCase().matches(Command.CALC.toString()))
-                answerText = calculateExpenses(messageText, userID);
-            else if (messageText.toUpperCase().matches(Command.CALCTOTAL.toString()))
+            else if (messageText.toUpperCase().matches(Command.CALC.toString()))
+                answerText = calculateExpenses(messageText, userID, chatID);
+            /*else if (messageText.toUpperCase().matches(Command.CALCTOTAL.toString()))
                 answerText = calculateTotalExpenses(messageText, userID);
             else if (messageText.toUpperCase().matches(Command.ENDTRIP.toString() + " \\S+ \\S+"))
                 answerText = endTrip(messageText, userID);*/
@@ -81,6 +78,20 @@ public class TravelBot extends TelegramLongPollingBot {
         }
         
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String calculateExpenses(String messageText, int userID, long chatID) throws DBException {
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+        TreeMap<Expense, Traveler> map = new TreeMap<>(Collections.reverseOrder());
+        map.putAll(DBHelper.getExpensesFromTrip(chatID));
+
+        if (map.isEmpty()){
+            return "Error: no expenses in current trip";
+        }
+
+        return Calculator.getTotalExpensesByTraveler(map);
     }
 
     private String removeExpense(String messageText, int userID, long chatID) throws DBException {

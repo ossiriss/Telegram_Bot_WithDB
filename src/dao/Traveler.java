@@ -33,4 +33,25 @@ public class Traveler {
     public int getUserId() {
         return userId;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Traveler traveler = (Traveler) o;
+
+        if (userId != traveler.userId) return false;
+        if (firstName != null ? !firstName.equals(traveler.firstName) : traveler.firstName != null) return false;
+        return lastName != null ? lastName.equals(traveler.lastName) : traveler.lastName == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = firstName != null ? firstName.hashCode() : 0;
+        result = 31 * result + (lastName != null ? lastName.hashCode() : 0);
+        result = 31 * result + userId;
+        return result;
+    }
 }
