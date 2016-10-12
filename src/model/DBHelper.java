@@ -269,4 +269,31 @@ public class DBHelper {
             throw new DBException("something gone wrong in 'updatePersonalData'");
         }
     }
+
+    public static String showTravelers(long chatID) throws DBException {
+        String result = "Travelers list(TelegramID\tName\tSurname):\n";
+
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "select u.ID_Telegram, u.Name, u.Surname from users2trips u2t, users u" +
+                    " where u2t.TripID = " + chatID +
+                    " and u2t.deletedFlag = 0" +
+                    " and u2t.ID_Telegram = u.ID_Telegram";
+            Statement st = conn.createStatement();
+            ResultSet rs = st.executeQuery(query);
+            while (rs.next()) {
+                int id = rs.getInt("ID_Telegram");
+                String name = rs.getString("Name");
+                String surname = rs.getString("Surname");
+                result+= id + "\t" + name + "\t" + surname + "\t\n";
+            }
+            rs.close();
+            st.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'getUsersInTrip'");
+            throw new DBException("something gone wrong in 'getUsersInTrip'");
+        }
+
+        return result;
+    }
 }

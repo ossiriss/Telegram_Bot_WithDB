@@ -71,6 +71,8 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = calculateTotalExpenses(chatID);
             else if (messageText.toUpperCase().matches(Command.UPDATENAME.toString()))
                 answerText = updatePersonalData(userID, message.getFrom().getFirstName(), message.getFrom().getLastName());
+            else if (messageText.toUpperCase().matches(Command.SHOWTRAVELERS.toString()))
+                answerText = showTravelers(chatID);
             else answerText = "Wrong command";
         } catch (Exception e) {
             e.printStackTrace();
@@ -78,6 +80,14 @@ public class TravelBot extends TelegramLongPollingBot {
         }
         
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String showTravelers(long chatID) throws DBException {
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+
+        return DBHelper.showTravelers(chatID);
     }
 
     private String updatePersonalData(int userID, String fname, String lname) throws DBException {
