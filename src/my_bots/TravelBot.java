@@ -69,6 +69,8 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = calculateExpenses(chatID);
             else if (messageText.toUpperCase().matches(Command.CALCTOTAL.toString()))
                 answerText = calculateTotalExpenses(chatID);
+            else if (messageText.toUpperCase().matches(Command.UPDATENAME.toString()))
+                answerText = updatePersonalData(userID, message.getFrom().getFirstName(), message.getFrom().getLastName());
             else answerText = "Wrong command";
         } catch (Exception e) {
             e.printStackTrace();
@@ -76,6 +78,11 @@ public class TravelBot extends TelegramLongPollingBot {
         }
         
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String updatePersonalData(int userID, String fname, String lname) throws DBException {
+        DBHelper.updatePersonalData(userID, fname, lname);
+        return "Data updated successfully";
     }
 
     private String calculateTotalExpenses(long chatID) throws DBException {
@@ -236,7 +243,7 @@ public class TravelBot extends TelegramLongPollingBot {
         message += "/DELEXP 'exp id' - remove expense\n";
         message += "/CALC - show debts for each\n";
         message += "/CALCTOTAL - show total debts for each\n";
-        message += "/ENDTRIP 'Trip Name' 'Password' - Terminate trip. Only creator can do it.\n";
+        message += "/UPDATENAME - update your name from your telegramm account.\n";
 
         return message;
     }

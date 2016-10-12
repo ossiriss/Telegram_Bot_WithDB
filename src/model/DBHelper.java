@@ -225,8 +225,8 @@ public class DBHelper {
             st.close();
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("something gone wrong in 'getUsersList'");
-            throw new DBException("something gone wrong in 'getUsersList'");
+            System.out.println("something gone wrong in 'getExpenseById'");
+            throw new DBException("something gone wrong in 'getExpenseById'");
         }
 
         return result;
@@ -246,8 +246,27 @@ public class DBHelper {
             preparedStmt.execute();
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("something gone wrong in 'removeUserFromTrip'");
-            throw new DBException("something gone wrong in 'removeUserFromTrip'");
+            System.out.println("something gone wrong in 'removeExpense'");
+            throw new DBException("something gone wrong in 'removeExpense'");
+        }
+    }
+
+    public static void updatePersonalData(int userID, String fname, String lname) throws DBException {
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "update users " +
+                    "set Name = ?, surname = ? " +
+                    "where ID_Telegram = ? ";
+            PreparedStatement preparedStmt = conn.prepareStatement(query);
+
+            preparedStmt.setString(1, fname);
+            preparedStmt.setString(2, lname);
+            preparedStmt.setInt(3, userID);
+
+            preparedStmt.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'updatePersonalData'");
+            throw new DBException("something gone wrong in 'updatePersonalData'");
         }
     }
 }
