@@ -146,7 +146,7 @@ public class Calculator {
             for (Map.Entry<Expense, Traveler> entry: expenses.entrySet()) {   //fill map with total spends for traveler
                 Traveler traveler = entry.getValue();
                 Expense expense = entry.getKey();
-                if (t == traveler){
+                if (t.equals(traveler)){
                     totalForTraveler.put(expense.getCurrency(), expense.getSum() + totalForTraveler.get
                             (expense.getCurrency()));
                 }
