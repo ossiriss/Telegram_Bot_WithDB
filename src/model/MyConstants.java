@@ -4,7 +4,7 @@ package model;
  * Created by Boris on 26-Sep-16.
  */
 public class MyConstants {
-    public static final String BOT_TOKEN = "284456818:AAEPCG6fl7vIR9caaU9a3EMsbSofxxtSb9E";
+    public static final String BOT_TOKEN = "BOT TOKEN HERE";
     public static final String BOT_USERNAME = "Travel_Bot";
     public static final int ADMIN_ID = 243895329;
     public static final String DB_url = "jdbc:mysql://localhost:3306/travelbase?autoReconnect=true&useSSL=false";
