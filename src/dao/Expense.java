@@ -43,10 +43,6 @@ public class Expense implements Comparable<Expense>{
         return description;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
     public LocalDateTime getDate() {
         return date;
     }

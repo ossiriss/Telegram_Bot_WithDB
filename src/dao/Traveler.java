@@ -7,6 +7,8 @@ public class Traveler {
     private String firstName;
     private String lastName;
     private int userId;
+    private int sponsorID;
+    private int weight = 1;
 
     public Traveler(String firstName, String lastName, int userId) {
         this.firstName = firstName;
@@ -14,20 +16,31 @@ public class Traveler {
         this.userId = userId;
     }
 
+    public Traveler(String firstName, String lastName, int userId, int sponsorID) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.userId = userId;
+        this.sponsorID = sponsorID;
+    }
+
+    public int getWeight() {
+        return weight;
+    }
+
+    public int increaseWeight(){
+        return ++weight;
+    }
+
+    public int getSponsorID() {
+        return sponsorID;
+    }
+
     public String getFirstName() {
         return firstName;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
     public String getLastName() {
         return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
     }
 
     public int getUserId() {
@@ -41,17 +54,12 @@ public class Traveler {
 
         Traveler traveler = (Traveler) o;
 
-        if (userId != traveler.userId) return false;
-        if (firstName != null ? !firstName.equals(traveler.firstName) : traveler.firstName != null) return false;
-        return lastName != null ? lastName.equals(traveler.lastName) : traveler.lastName == null;
+        return userId == traveler.userId;
 
     }
 
     @Override
     public int hashCode() {
-        int result = firstName != null ? firstName.hashCode() : 0;
-        result = 31 * result + (lastName != null ? lastName.hashCode() : 0);
-        result = 31 * result + userId;
-        return result;
+        return userId;
     }
 }

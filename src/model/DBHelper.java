@@ -7,6 +7,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * Created by Boris on 26-Sep-16.
@@ -136,10 +137,11 @@ public class DBHelper {
         HashMap<Expense, Traveler> result = new HashMap<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "select ID, expense_datetime, sum, cur, comment, userID, Name, Surname " +
-                    "from expenses, users where TripID = " + tripId +
-                    " and userID = ID_Telegram" +
-                    " and + deletedFlag = 0";
+            String query = "select e.ID, e.expense_datetime, e.sum, e.cur, e.comment, e.userID, u.Name, u.Surname, u2t.Merge_parent_ID " +
+                    "from expenses e, users u, users2trips u2t where e.TripID = " + tripId +
+                    " and e.userID = u.ID_Telegram" +
+                    " and e.deletedFlag = 0" +
+                    " and e.userID = u2t.ID_Telegram";
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
             while (rs.next()) {
@@ -151,7 +153,9 @@ public class DBHelper {
                 int userID = rs.getInt("userID");
                 String name = rs.getString("Name");
                 String surname = rs.getString("Surname");
-                result.put(new Expense(sum, cur, comment, id, date.toLocalDateTime(), userID), new Traveler(name, surname, userID));
+                int mergeParentID = rs.getInt("Merge_parent_ID");
+
+                result.put(new Expense(sum, cur, comment, id, date.toLocalDateTime(), userID), new Traveler(name, surname, userID, mergeParentID));
             }
             rs.close();
             st.close();
@@ -270,11 +274,11 @@ public class DBHelper {
         }
     }
 
-    public static String showTravelers(long chatID) throws DBException {
-        String result = "Travelers list(TelegramID\tName\tSurname):\n";
+    public static HashSet<Traveler> getTravelers(long chatID) throws DBException {
+        HashSet<Traveler> result = new HashSet<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "select u.ID_Telegram, u.Name, u.Surname from users2trips u2t, users u" +
+            String query = "select u.ID_Telegram, u.Name, u.Surname, u2t.Merge_parent_ID from users2trips u2t, users u" +
                     " where u2t.TripID = " + chatID +
                     " and u2t.deletedFlag = 0" +
                     " and u2t.ID_Telegram = u.ID_Telegram";
@@ -284,16 +288,38 @@ public class DBHelper {
                 int id = rs.getInt("ID_Telegram");
                 String name = rs.getString("Name");
                 String surname = rs.getString("Surname");
-                result+= id + "\t" + name + "\t" + surname + "\t\n";
+                int mergeParentID = rs.getInt("Merge_parent_ID");
+                result.add(new Traveler(name, surname, id, mergeParentID));
             }
             rs.close();
             st.close();
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("something gone wrong in 'getUsersInTrip'");
-            throw new DBException("something gone wrong in 'getUsersInTrip'");
+            System.out.println("something gone wrong in 'getTravelers'");
+            throw new DBException("something gone wrong in 'getTravelers'");
         }
 
         return result;
+    }
+
+    public static void setMerge(long chatID, int userID, int targetUser) throws DBException {
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "update users2trips " +
+                    "set Merge_parent_ID = ? " +
+                    "where ID_Telegram = ? " +
+                    "and TripID = ? " +
+                    "and deletedFlag = 0";
+            PreparedStatement preparedStmt = conn.prepareStatement(query);
+
+            preparedStmt.setInt(1, userID);
+            preparedStmt.setInt(2, targetUser);
+            preparedStmt.setLong(3, chatID);
+
+            preparedStmt.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'updatePersonalData'");
+            throw new DBException("something gone wrong in 'updatePersonalData'");
+        }
     }
 }

@@ -3,17 +3,15 @@ package my_bots;
 import dao.Expense;
 import dao.Traveler;
 import model.*;
-import org.telegram.telegrambots.TelegramApiException;
+import org.telegram.telegrambots.Constants;
+import org.telegram.telegrambots.exceptions.TelegramApiException;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,6 +48,7 @@ public class TravelBot extends TelegramLongPollingBot {
             sendMessage("You must have Last Name in telegram to use this bot", message.getChatId().toString());
             return;
         }
+        messageText = messageText.replace("@" + MyConstants.BOT_USERNAME, "");
         try {
             if (messageText.equalsIgnoreCase(Command.HELP.toString()) || messageText.equalsIgnoreCase(Command.START.toString()))
                 answerText = getHelp();
@@ -73,13 +72,53 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = updatePersonalData(userID, message.getFrom().getFirstName(), message.getFrom().getLastName());
             else if (messageText.toUpperCase().matches(Command.SHOWTRAVELERS.toString()))
                 answerText = showTravelers(chatID);
+            else if (messageText.toUpperCase().matches(Command.FUND.toString() + " \\d+"))
+                answerText = giveSponsorship(chatID, userID, messageText);
+            else if (messageText.toUpperCase().matches(Command.DELFUND.toString() + " \\d+"))
+                answerText = removeSponsorship(chatID, userID, messageText);
             else answerText = "Wrong command";
         } catch (Exception e) {
             e.printStackTrace();
             answerText = "Error, some command trowed exception: " + e.getMessage();
         }
-        
+
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String removeSponsorship(long chatID, int userID, String messageText) throws DBException {
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+        ArrayList<Integer> usersIdInTrip = DBHelper.getUsersInTrip(chatID);
+        if (!usersIdInTrip.contains(userID))
+            return "Error: Traveler not found in current trip";
+
+        int targetUser = Integer.parseInt(messageText.substring(Command.DELFUND.toString().length()+1));
+        if (userID == targetUser) return "you can't fund yourself";
+
+        if (!usersIdInTrip.contains(targetUser))
+            return "Error: object of funding not found in current trip";
+
+        DBHelper.setMerge(chatID, 0, targetUser);
+        return "Funding removed successfully";
+    }
+
+    private String giveSponsorship(long chatID, int userID, String messageText) throws DBException {
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+        ArrayList<Integer> usersIdInTrip = DBHelper.getUsersInTrip(chatID);
+        if (!usersIdInTrip.contains(userID))
+            return "Error: Traveler not found in current trip";
+
+        int targetUser = Integer.parseInt(messageText.substring(Command.FUND.toString().length()+1));
+        if (userID == targetUser) return "you can't fund yourself";
+
+        if (!usersIdInTrip.contains(targetUser))
+            return "Error: object of funding not found in current trip";
+
+        DBHelper.setMerge(chatID, userID, targetUser);
+        return "Funding set successfully";
     }
 
     private String showTravelers(long chatID) throws DBException {
@@ -87,7 +126,12 @@ public class TravelBot extends TelegramLongPollingBot {
             return "no such trip, you need to enter trip first";
         }
 
-        return DBHelper.showTravelers(chatID);
+        String result = "Travelers list(TelegramID\tName\tSurname):\n";
+        for (Traveler t : DBHelper.getTravelers(chatID)) {
+            result += t.getUserId() + "\t " + t.getFirstName() + "\t" + t.getLastName() + "\n";
+        }
+
+        return result;
     }
 
     private String updatePersonalData(int userID, String fname, String lname) throws DBException {
@@ -106,7 +150,7 @@ public class TravelBot extends TelegramLongPollingBot {
             return "Error: no expenses in current trip";
         }
 
-        return Calculator.getTotalExpenses(map);
+        return Calculator.getTotalExpenses(map, DBHelper.getTravelers(chatID));
     }
 
     private String calculateExpenses(long chatID) throws DBException {
@@ -120,7 +164,7 @@ public class TravelBot extends TelegramLongPollingBot {
             return "Error: no expenses in current trip";
         }
 
-        return Calculator.getTotalExpensesByTraveler(map);
+        return Calculator.getTotalExpensesByTraveler(map, DBHelper.getTravelers(chatID));
     }
 
     private String removeExpense(String messageText, int userID, long chatID) throws DBException {
@@ -254,6 +298,9 @@ public class TravelBot extends TelegramLongPollingBot {
         message += "/CALC - show debts for each\n";
         message += "/CALCTOTAL - show total debts for each\n";
         message += "/UPDATENAME - update your name from your telegramm account.\n";
+        message += "/SHOWTRAVELERS - show travelers list with their telegramID\n";
+        message += "/FUND 'telegramID' - become sponsor for a traveler(expenses merged in '/calc')\n";
+        message += "/DELFUND 'telegramID' - stop sponsorship(unMerge)\n";
 
         return message;
     }

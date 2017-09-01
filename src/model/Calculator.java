@@ -10,31 +10,45 @@ import java.util.*;
  */
 public class Calculator {
 
-    public static String getTotalExpensesByTraveler(TreeMap<Expense, Traveler> expenses) {
-        Set<Traveler> travelers = new HashSet<>();
-        for (Map.Entry<Expense, Traveler> entry: expenses.entrySet()) {
-            travelers.add(entry.getValue());
+    public static String getTotalExpensesByTraveler(TreeMap<Expense, Traveler> expenses, Set<Traveler> travelers) {
+
+        for (Traveler trav:travelers ) {
+            for (Traveler t:travelers ) {
+                if (trav.getSponsorID() == t.getUserId()){
+                    t.increaseWeight();
+                }
+            }
         }
 
         String result = "";
-        ArrayList<String> resultList = new ArrayList<>();
+        ArrayList<String> resultList = new ArrayList<String>();
         HashSet<String> currency = new HashSet<String>();
         for (Expense e:expenses.keySet() ) {
             currency.add(e.getCurrency());
         }
 
         for (String cur : currency) {
-            LinkedHashMap<Traveler, Double> perTraveler = new LinkedHashMap<>();
+            LinkedHashMap<Traveler, Double> perTraveler = new LinkedHashMap<Traveler, Double>();
             ArrayList<String> clients = new ArrayList<String>();
             ArrayList<Double> balance = new ArrayList<Double>();
             double totalForEach = 0.;
             for (Traveler t : travelers) {
-                perTraveler.put(t, 0.);
+                if (t.getSponsorID() == 0)
+                    perTraveler.put(t, 0.);
             }
             for (Map.Entry<Expense, Traveler> entry: expenses.entrySet()) {
                 Expense e = entry.getKey();
                 Traveler t = entry.getValue();
                 if (e.getCurrency().equals(cur)){
+                    if (t.getSponsorID()!=0){
+                        Traveler sponsor = new Traveler("sponsor", "sponsor", t.getSponsorID());
+                        for (Traveler trav:travelers ) {
+                            if (trav.equals(sponsor)){
+                                t = trav;
+                                break;
+                            }
+                        }
+                    }
                     perTraveler.put(t, e.getSum() + perTraveler.get(t));
                     totalForEach += e.getSum();
                 }
@@ -43,7 +57,7 @@ public class Calculator {
             for (Map.Entry<Traveler, Double> entry: perTraveler.entrySet()) {
                 Traveler t = entry.getKey();
                 double d = entry.getValue();
-                perTraveler.put(t, d-totalForEach);
+                perTraveler.put(t, d-totalForEach*t.getWeight());
             }
             orderByValue(perTraveler, Comparator.<Double>naturalOrder().reversed());
 
@@ -115,12 +129,8 @@ public class Calculator {
                 .forEachOrdered(e -> m.put(e.getKey(), e.getValue()));
     }
 
-    public static String getTotalExpenses(TreeMap<Expense, Traveler> expenses) {
-        Set<Traveler> travelers = new HashSet<>();
-        for (Map.Entry<Expense, Traveler> entry: expenses.entrySet()) {
-            travelers.add(entry.getValue());
-        }
-        
+    public static String getTotalExpenses(TreeMap<Expense, Traveler> expenses, Set<Traveler> travelers) {
+
         String result = "Total spent: ";
         HashMap<String, Double> total = new HashMap<String, Double>();
         for (Expense e : expenses.keySet()) {
