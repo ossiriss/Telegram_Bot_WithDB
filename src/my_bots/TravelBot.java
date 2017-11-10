@@ -10,6 +10,7 @@ import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
+import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -66,6 +67,8 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = removeExpense(messageText, userID, chatID);
             else if (messageText.toUpperCase().matches(Command.CALC.toString()))
                 answerText = calculateExpenses(chatID);
+            else if (messageText.toUpperCase().matches(Command.CALC.toString() + " [A-Z]{3}"))
+                answerText = calculateExpensesInCurrency(chatID, messageText);
             else if (messageText.toUpperCase().matches(Command.CALCTOTAL.toString()))
                 answerText = calculateTotalExpenses(chatID);
             else if (messageText.toUpperCase().matches(Command.UPDATENAME.toString()))
@@ -165,6 +168,24 @@ public class TravelBot extends TelegramLongPollingBot {
         }
 
         return Calculator.getTotalExpensesByTraveler(map, DBHelper.getTravelers(chatID));
+    }
+
+    private String calculateExpensesInCurrency(long chatID, String messageText) throws Exception {
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+        TreeMap<Expense, Traveler> map = new TreeMap<>(Collections.reverseOrder());
+        map.putAll(DBHelper.getExpensesFromTrip(chatID));
+
+        if (map.isEmpty()){
+            return "Error: no expenses in current trip";
+        }
+
+        int commandLength = Command.CALC.toString().length() + 1;
+        String currency = messageText.substring(commandLength, commandLength+3).toUpperCase();
+        if (currency.equals("RUR")) currency = "RUB";
+
+        return Calculator.getTotalExpensesByTravelerInCurrency(map, DBHelper.getTravelers(chatID), currency);
     }
 
     private String removeExpense(String messageText, int userID, long chatID) throws DBException {
@@ -296,6 +317,7 @@ public class TravelBot extends TelegramLongPollingBot {
         message += "/SHOWEXP 'days' - show current expenses. days - opitonal\n";
         message += "/DELEXP 'exp id' - remove expense\n";
         message += "/CALC - show debts for each\n";
+        message += "/CALC 'currency' - show debts for each in specific currency\n";
         message += "/CALCTOTAL - show total debts for each\n";
         message += "/UPDATENAME - update your name from your telegramm account.\n";
         message += "/SHOWTRAVELERS - show travelers list with their telegramID\n";

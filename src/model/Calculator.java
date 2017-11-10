@@ -3,12 +3,29 @@ package model;
 import dao.Expense;
 import dao.Traveler;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
  * Created by Boris on 11-Oct-16.
  */
 public class Calculator {
+
+    public static String getTotalExpensesByTravelerInCurrency(TreeMap<Expense, Traveler> expenses, Set<Traveler> travelers, String currency) throws Exception{
+        //TreeMap<Expense, Traveler> expensesInCurrency = new TreeMap<Expense, Traveler>();
+
+        for(Map.Entry<Expense,Traveler> entry : expenses.entrySet()) {
+            Expense expense = entry.getKey();
+            Traveler traveler = entry.getValue();
+
+            if (!expense.getCurrency().equals(currency)){
+                expense.setSum(HttpHelper.convertCurrency(expense.getSum(), expense.getCurrency(), currency));
+                expense.setCurrency(currency);
+            }
+        }
+
+        return getTotalExpensesByTraveler(expenses, travelers);
+    }
 
     public static String getTotalExpensesByTraveler(TreeMap<Expense, Traveler> expenses, Set<Traveler> travelers) {
 

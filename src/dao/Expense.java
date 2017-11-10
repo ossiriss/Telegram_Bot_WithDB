@@ -93,4 +93,12 @@ public class Expense implements Comparable<Expense>{
                 ", userID=" + userID +
                 '}';
     }
+
+    public void setSum(double sum) {
+        this.sum = sum;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
 }
