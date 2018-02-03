@@ -141,7 +141,8 @@ public class DBHelper {
                     "from expenses e, users u, users2trips u2t where e.TripID = " + tripId +
                     " and e.userID = u.ID_Telegram" +
                     " and e.deletedFlag = 0" +
-                    " and e.userID = u2t.ID_Telegram";
+                    " and e.userID = u2t.ID_Telegram" +
+                    " and u2t.TripID = e.TripID";
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
             while (rs.next()) {

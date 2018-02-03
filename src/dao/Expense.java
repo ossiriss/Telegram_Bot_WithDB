@@ -79,7 +79,12 @@ public class Expense implements Comparable<Expense>{
 
     @Override
     public int compareTo(Expense o) {
-        return date.compareTo(o.date);
+        int byDate = date.compareTo(o.date);
+        if (byDate != 0){
+            return byDate;
+        } else{
+            return id - o.id;
+        }
     }
 
     @Override
