@@ -11,6 +11,16 @@ import java.util.*;
  */
 public class Calculator {
 
+    private static Traveler getTravelerByID(Set<Traveler> travelers, int id){
+        Traveler sponsor = new Traveler("sponsor", "sponsor", id);
+        for (Traveler trav:travelers ) {
+            if (trav.equals(sponsor)){
+                return trav;
+            }
+        }
+        return sponsor;
+    }
+
     public static String getTotalExpensesByTravelerInCurrency(TreeMap<Expense, Traveler> expenses, Set<Traveler> travelers, String currency) throws Exception{
         //TreeMap<Expense, Traveler> expensesInCurrency = new TreeMap<Expense, Traveler>();
 
@@ -58,16 +68,16 @@ public class Calculator {
                 Traveler t = entry.getValue();
                 if (e.getCurrency().equals(cur)){
                     if (t.getSponsorID()!=0){
-                        Traveler sponsor = new Traveler("sponsor", "sponsor", t.getSponsorID());
-                        for (Traveler trav:travelers ) {
-                            if (trav.equals(sponsor)){
-                                t = trav;
-                                break;
-                            }
-                        }
+                        t = getTravelerByID(travelers, t.getSponsorID());
                     }
                     perTraveler.put(t, e.getSum() + perTraveler.get(t));
-                    totalForEach += e.getSum();
+                    if (e.getTargetUserId() == 0) {
+                        totalForEach += e.getSum();
+                    }else {
+                        Traveler trav = getTravelerByID(travelers, e.getTargetUserId());
+                        if (trav.getSponsorID() != 0) trav = getTravelerByID(travelers, trav.getSponsorID());
+                        perTraveler.put(trav, perTraveler.get(trav) - e.getSum());
+                    }
                 }
             }
             totalForEach = totalForEach/travelers.size();
@@ -151,6 +161,9 @@ public class Calculator {
         String result = "Total spent: ";
         HashMap<String, Double> total = new HashMap<String, Double>();
         for (Expense e : expenses.keySet()) {
+            if (e.getTargetUserId() != 0){
+                continue;
+            }
             if (total.containsKey(e.getCurrency()))
                 total.put(e.getCurrency(), e.getSum() + total.get(e.getCurrency()));
             else
@@ -174,14 +187,22 @@ public class Calculator {
                 Traveler traveler = entry.getValue();
                 Expense expense = entry.getKey();
                 if (t.equals(traveler)){
-                    totalForTraveler.put(expense.getCurrency(), expense.getSum() + totalForTraveler.get
-                            (expense.getCurrency()));
+                    if (expense.getTargetUserId() != 0){
+                        if (!total.containsKey(expense.getCurrency())) totalForTraveler.put(expense.getCurrency(), 0.);
+                        totalForTraveler.put(expense.getCurrency(),  totalForTraveler.get(expense.getCurrency()) + expense.getSum());
+                    }else {
+                        totalForTraveler.put(expense.getCurrency(), expense.getSum() + totalForTraveler.get(expense.getCurrency()));
+                    }
+                } else if (t.getUserId() == expense.getTargetUserId()){
+                    if (!total.containsKey(expense.getCurrency())) totalForTraveler.put(expense.getCurrency(), 0.);
+                    totalForTraveler.put(expense.getCurrency(),  totalForTraveler.get(expense.getCurrency()) - expense.getSum());
                 }
             }
             for (Map.Entry<String, Double> entry: totalForTraveler.entrySet()) {
                 String cur = entry.getKey();
                 double amount = entry.getValue();
-                double sum = Math.round((total.get(cur) - amount)*100.)/100.;
+                double totalAmount = total.get(cur) != null ? total.get(cur) : 0.;
+                double sum = Math.round((totalAmount - amount)*100.)/100.;
                 if (Math.abs(sum) > 0.01)
                     sTotal += sum + cur + ", ";
             }

@@ -13,14 +13,20 @@ public class Expense implements Comparable<Expense>{
     private LocalDateTime date;
     private int id;
     private int userID;
+    private int targetUserId;
 
-    public Expense(double sum, String currency, String description, int id, LocalDateTime date, int userID) {
+    public Expense(double sum, String currency, String description, int id, LocalDateTime date, int userID, int targetUserId) {
         this.sum = sum;
         this.currency = currency;
         this.description = description;
         this.date = date;
         this.id = id;
         this.userID = userID;
+        this.targetUserId = targetUserId;
+    }
+
+    public int getTargetUserId() {
+        return targetUserId;
     }
 
     public int getUserID() {

@@ -22,8 +22,7 @@ public class HttpHelper {
             }
         }
 
-        String url = "https://finance.google.com/finance/converter?a=1&from=" + from +
-                "&to=" + to + "&meta=ei%3DDWzGWajjIIOKUNvrsbgF";
+        String url = "http://xe.com/currencyconverter/convert/?Amount=1&From=" + from + "&To=" + to;
 
         try {
             URL obj = new URL(url);
@@ -39,7 +38,12 @@ public class HttpHelper {
             }
             in.close();
 
-            int index = response.indexOf("<span class=bld>") + "<span class=bld>".length();
+            if (!response.toString().toUpperCase().contains("'"+from.toUpperCase()+"'") || !response.toString().toUpperCase().contains("'"+to.toUpperCase
+                    ()+"'")){
+                throw new NumberFormatException();
+            }
+
+            int index = response.indexOf("<span class='uccResultAmount'>") + "<span class='uccResultAmount'>".length();
             double myRes = Double.parseDouble(response.substring(index, index+7));
             double rate = Math.round(myRes*100)/100.;
 
@@ -53,9 +57,9 @@ public class HttpHelper {
 
             return rate * amount;
         } catch (IOException e) {
-            throw new IOException("can't get exchange rate from google");
+            throw new IOException("can't get exchange rate from xc.com");
         } catch (NumberFormatException e){
-            throw new NumberFormatException("probably google doesn't have exchange rate for this currency");
+            throw new NumberFormatException("probably xc.com doesn't have exchange rate for this currency");
         }
 
     }

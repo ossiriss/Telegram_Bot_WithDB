@@ -13,8 +13,46 @@ import java.util.HashSet;
  * Created by Boris on 26-Sep-16.
  */
 public class DBHelper {
-    public static void main(String[] args) throws Exception {
+    public static Traveler getTravelerByUserID(int userId) throws Exception{
+        Traveler result = null;
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "select Name, Surname from users where ID_Telegram = '" + userId + "'";
+            Statement st = conn.createStatement();
+            ResultSet rs = st.executeQuery(query);
+            if (rs.next()) {
+                result = new Traveler(rs.getString("Name"), rs.getString("Surname"), userId);
+            }
+            rs.close();
+            st.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'getUserIdByUsername'");
+            throw new DBException("something gone wrong in 'getUserIdByUsername'");
+        }
+        if (result == null) throw  new Exception("user not found in DB");
 
+        return result;
+    }
+
+    public static int getUserIdByUsername(String userName) throws Exception{
+        Integer result = null;
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "select ID_Telegram from users where Username = '" + userName + "'";
+            Statement st = conn.createStatement();
+            ResultSet rs = st.executeQuery(query);
+            if (rs.next()) {
+                result = rs.getInt("ID_Telegram");
+            }
+            rs.close();
+            st.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'getUserIdByUsername'");
+            throw new DBException("something gone wrong in 'getUserIdByUsername'");
+        }
+        if (result == null) throw new Exception("Mentioned username not found in DB. This user should execute any command");
+
+        return result;
     }
 
     public static ArrayList<Integer> getUsersList() throws DBException{
@@ -39,14 +77,15 @@ public class DBHelper {
         return result;
     }
 
-    public static void addUser(int userId, String name, String surname) throws DBException{
+    public static void addUser(int userId, String name, String surname, String uName) throws DBException{
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "insert into users(ID_Telegram, Name, Surname) values(?,?,?)";
+            String query = "insert into users(ID_Telegram, Name, Surname, Username) values(?,?,?,?)";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
 
             preparedStmt.setInt(1, userId);
             preparedStmt.setString(2, name);
             preparedStmt.setString(3, surname);
+            preparedStmt.setString(4, uName);
 
             preparedStmt.execute();
         } catch (SQLException e) {
@@ -137,7 +176,7 @@ public class DBHelper {
         HashMap<Expense, Traveler> result = new HashMap<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "select e.ID, e.expense_datetime, e.sum, e.cur, e.comment, e.userID, u.Name, u.Surname, u2t.Merge_parent_ID " +
+            String query = "select e.ID, e.expense_datetime, e.sum, e.cur, e.comment, e.userID, u.Name, u.Surname, u2t.Merge_parent_ID, e.targetUserId " +
                     "from expenses e, users u, users2trips u2t where e.TripID = " + tripId +
                     " and e.userID = u.ID_Telegram" +
                     " and e.deletedFlag = 0" +
@@ -155,8 +194,8 @@ public class DBHelper {
                 String name = rs.getString("Name");
                 String surname = rs.getString("Surname");
                 int mergeParentID = rs.getInt("Merge_parent_ID");
-
-                result.put(new Expense(sum, cur, comment, id, date.toLocalDateTime(), userID), new Traveler(name, surname, userID, mergeParentID));
+                int targetUserId = rs.getInt("targetUserId");
+                result.put(new Expense(sum, cur, comment, id, date.toLocalDateTime(), userID, targetUserId), new Traveler(name, surname, userID, mergeParentID));
             }
             rs.close();
             st.close();
@@ -188,9 +227,9 @@ public class DBHelper {
         }
     }
 
-    public static void addExpense(double numAmount, String currency, String comment, int userID, long tripID) throws DBException {
+    public static void addExpense(double numAmount, String currency, String comment, int userID, long tripID, int targetUserId) throws DBException {
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "insert into expenses(sum, cur, comment, tripID, userID) values(?,?,?,?,?)";
+            String query = "insert into expenses(sum, cur, comment, tripID, userID, targetUserId) values(?,?,?,?,?,?)";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
 
             preparedStmt.setDouble(1, numAmount);
@@ -198,7 +237,7 @@ public class DBHelper {
             preparedStmt.setString(3, comment);
             preparedStmt.setLong(4, tripID);
             preparedStmt.setInt(5, userID);
-
+            preparedStmt.setInt(6, targetUserId);
             preparedStmt.execute();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -211,7 +250,7 @@ public class DBHelper {
         Expense result = null;
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "SELECT ID, expense_datetime, sum, cur, comment, userID FROM travelbase.expenses" +
+            String query = "SELECT ID, expense_datetime, sum, cur, comment, userID, targetUserId FROM travelbase.expenses" +
                     " where tripID = " + chatID +
                     " and id = " + userID +
                     " and + deletedFlag = 0";
@@ -224,7 +263,8 @@ public class DBHelper {
                 String cur = rs.getString("cur");
                 String comment = rs.getString("comment");
                 int user = rs.getInt("userID");
-                result = new Expense(sum, cur, comment, id, date.toLocalDateTime(), user);
+                int targetUserId = rs.getInt("targetUserId");
+                result = new Expense(sum, cur, comment, id, date.toLocalDateTime(), user, targetUserId);
             }
             rs.close();
             st.close();
@@ -256,16 +296,17 @@ public class DBHelper {
         }
     }
 
-    public static void updatePersonalData(int userID, String fname, String lname) throws DBException {
+    public static void updatePersonalData(int userID, String fname, String lname, String uName) throws DBException {
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "update users " +
-                    "set Name = ?, surname = ? " +
+                    "set Name = ?, surname = ?, username = ? " +
                     "where ID_Telegram = ? ";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
 
             preparedStmt.setString(1, fname);
             preparedStmt.setString(2, lname);
-            preparedStmt.setInt(3, userID);
+            preparedStmt.setString(3, uName);
+            preparedStmt.setInt(4, userID);
 
             preparedStmt.execute();
         } catch (SQLException e) {
