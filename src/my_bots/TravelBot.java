@@ -23,6 +23,8 @@ import java.util.regex.Pattern;
  * Created by Boris on 26-Sep-16.
  */
 public class TravelBot extends TelegramLongPollingBot {
+    private static final String emo_regex = "([\\u20a0-\\u32ff\\ud83c\\udc00-\\ud83d\\udeff\\udbb9\\udce5-\\udbb9\\udcee])";
+
     @Override
     public String getBotToken() {
         return MyConstants.BOT_TOKEN;
@@ -96,6 +98,8 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = credit(userID, chatID, messageText, mentionedUserId);
             else if (messageText.toUpperCase().matches(Command.SHOWFUNDED.toString()))
                 answerText = showFunded(chatID);
+            else if (messageText.toUpperCase().matches(Command.EXCLUDE.toString() + " .+ \\d+"))
+                answerText = exclude(chatID, userID, mentionedUserId, messageText);
             else answerText = "Wrong command";
         } catch (Exception e) {
             e.printStackTrace();
@@ -103,6 +107,29 @@ public class TravelBot extends TelegramLongPollingBot {
         }
 
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String exclude(long chatID, int userID, Integer mentionedUserId, String messageText) throws DBException{
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+
+        ArrayList<Integer> usersInTrip = DBHelper.getUsersInTrip(chatID);
+        if (!usersInTrip.contains(userID))
+            return "Error: Traveler not found in current trip";
+        if (!usersInTrip.contains(mentionedUserId))
+            return "Error: target user not found in current trip";
+
+        int expenseID = Integer.parseInt(messageText.substring(messageText.lastIndexOf(' ')+1));
+
+        Expense exp = DBHelper.getExpenseById(expenseID, chatID);
+        if (exp.getExcludedUsers().contains(mentionedUserId)){
+            return "Error: target user already excluded from this expense";
+        }
+
+        DBHelper.addExclude(chatID, mentionedUserId, expenseID);
+
+        return "Target user successfully excluded";
     }
 
     private String showFunded(long chatID) throws DBException{
@@ -252,6 +279,11 @@ public class TravelBot extends TelegramLongPollingBot {
     }
 
     private String updatePersonalData(int userID, String fname, String lname, String uName) throws DBException {
+        Matcher matcher = Pattern.compile(emo_regex).matcher(fname+lname);
+        while (matcher.find()) {
+            return "Retards with emoji characters inside name or surname can't use this bot!";
+        }
+
         DBHelper.updatePersonalData(userID, fname, lname, uName);
         return "Data updated successfully";
     }
@@ -351,15 +383,23 @@ public class TravelBot extends TelegramLongPollingBot {
                 if (days > 1) days--;
             }
 
+            if (!expense.getExcludedUsers().isEmpty()){
+                for (int excludedID : expense.getExcludedUsers()){
+                    Traveler excludedTraveler = DBHelper.getTravelerByUserID(excludedID);
+                    answer = excludedTraveler.getFirstName() + " " + excludedTraveler.getLastName().substring(0,1) + ".\t" + answer;
+                }
+                answer = "\nexcluded: " + answer;
+            }
+
             if (expense.getDescription() != null) answer = expense.getDescription() + answer;
 
-            if (expense.getTargetUserId() == 0) {
-                answer = "\n" + expense.getId() + ") " + traveler.getFirstName() + " " + traveler.getLastName().substring
-                        (0, 1) + ". " + expense.getSum() + " " + expense.getCurrency() + " " + answer;
-            } else{
+            if (expense.getTargetUserId() != 0) {
                 Traveler target = DBHelper.getTravelerByUserID(expense.getTargetUserId());
                 answer = "\n" + expense.getId() + ") " + traveler.getFirstName() + " " + traveler.getLastName().substring
                         (0, 1) + ". -> " + target.getFirstName() + " " + target.getLastName().substring
+                        (0, 1) + ". " + expense.getSum() + " " + expense.getCurrency() + " " + answer;
+            } else{
+                answer = "\n" + expense.getId() + ") " + traveler.getFirstName() + " " + traveler.getLastName().substring
                         (0, 1) + ". " + expense.getSum() + " " + expense.getCurrency() + " " + answer;
             }
 
@@ -447,6 +487,7 @@ public class TravelBot extends TelegramLongPollingBot {
         message += "/FUND 'user mention' - become sponsor for a traveler(expenses merged in '/calc')\n";
         message += "/DELFUND 'user mention' - stop sponsorship(unMerge)\n";
         message += "/SHOWFUNDED - show funded users list\n";
+        message += "/EXCLUDE 'user mention' 'expense id' - exclude user from expense\n";
 
         return message;
     }

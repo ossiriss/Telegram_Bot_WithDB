@@ -13,6 +13,23 @@ import java.util.HashSet;
  * Created by Boris on 26-Sep-16.
  */
 public class DBHelper {
+    public static void addExclude(long tripID, int userID, int expenseID) throws DBException{
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "insert into expense2excluded(expenseUK, userID) values ((select UK from expenses where ID = ? and tripID = ?), ?);";
+            PreparedStatement preparedStmt = conn.prepareStatement(query);
+
+            preparedStmt.setInt(1, expenseID);
+            preparedStmt.setLong(2, tripID);
+            preparedStmt.setInt(3, userID);
+
+            preparedStmt.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'Exclude'");
+            throw new DBException("something gone wrong in 'Exclude'");
+        }
+    }
+
     public static Traveler getTravelerByUserID(int userId) throws Exception{
         Traveler result = null;
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
@@ -176,26 +193,40 @@ public class DBHelper {
         HashMap<Expense, Traveler> result = new HashMap<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "select e.ID, e.expense_datetime, e.sum, e.cur, e.comment, e.userID, u.Name, u.Surname, u2t.Merge_parent_ID, e.targetUserId " +
-                    "from expenses e, users u, users2trips u2t where e.TripID = " + tripId +
-                    " and e.userID = u.ID_Telegram" +
-                    " and e.deletedFlag = 0" +
-                    " and e.userID = u2t.ID_Telegram" +
-                    " and u2t.TripID = e.TripID";
+            String query = "select e.ID, e.expense_datetime, e.sum, e.cur, e.comment, e.userID, u.Name, u.Surname, u2t.Merge_parent_ID, e.targetUserId, " +
+                    "e2excl.userID " +
+                    "from expenses e join users u on e.userID = u.ID_Telegram join users2trips u2t on e.userID = u2t.ID_Telegram and u2t.TripID = e.TripID " +
+                    "left join expense2excluded e2excl on e.uk = e2excl.expenseUK where e.TripID = " + tripId +
+                    " and e.deletedFlag = 0 order by e.ID, e2excl.userID";
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
+            Expense lastExp = new Expense(0);
+            Traveler lastTraveler = new Traveler("dummy", "dummy", 0);
             while (rs.next()) {
                 int id = rs.getInt("ID");
-                Timestamp date = rs.getTimestamp("expense_datetime");
-                double sum = rs.getDouble("sum");
-                String cur = rs.getString("cur");
-                String comment = rs.getString("comment");
-                int userID = rs.getInt("userID");
-                String name = rs.getString("Name");
-                String surname = rs.getString("Surname");
-                int mergeParentID = rs.getInt("Merge_parent_ID");
-                int targetUserId = rs.getInt("targetUserId");
-                result.put(new Expense(sum, cur, comment, id, date.toLocalDateTime(), userID, targetUserId), new Traveler(name, surname, userID, mergeParentID));
+
+                if (lastExp.getId() != id){
+                    if(lastExp.getId() != 0) result.put(lastExp, lastTraveler);
+
+                    Timestamp date = rs.getTimestamp("expense_datetime");
+                    double sum = rs.getDouble("sum");
+                    String cur = rs.getString("cur");
+                    String comment = rs.getString("comment");
+                    int userID = rs.getInt("e.userID");
+                    String name = rs.getString("Name");
+                    String surname = rs.getString("Surname");
+                    int mergeParentID = rs.getInt("Merge_parent_ID");
+                    int targetUserId = rs.getInt("targetUserId");
+                    lastExp = new Expense(sum, cur, comment, id, date.toLocalDateTime(), userID, targetUserId);
+                    lastTraveler = new Traveler(name, surname, userID, mergeParentID);
+                }
+
+                int excludedUser = rs.getInt("e2excl.userID");
+                if (excludedUser != 0) lastExp.getExcludedUsers().add(excludedUser);
+            }
+
+            if (lastExp.getId() != 0){
+                result.put(lastExp, lastTraveler);
             }
             rs.close();
             st.close();
@@ -246,25 +277,30 @@ public class DBHelper {
         }
     }
 
-    public static Expense getExpenseById(int userID, long chatID) throws DBException {
+    public static Expense getExpenseById(int expenseID, long chatID) throws DBException {
         Expense result = null;
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "SELECT ID, expense_datetime, sum, cur, comment, userID, targetUserId FROM travelbase.expenses" +
-                    " where tripID = " + chatID +
-                    " and id = " + userID +
-                    " and + deletedFlag = 0";
+            String query = "SELECT exp.ID, exp.expense_datetime, exp.sum, exp.cur, exp.comment, exp.userID, exp.targetUserId, exp2excl.userID FROM expenses " +
+                    "exp left join expense2excluded exp2excl on exp.uk = exp2excl.expenseUK" +
+                    " where exp.tripID = " + chatID +
+                    " and exp.id = " + expenseID +
+                    " and + exp.deletedFlag = 0";
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
             while (rs.next()) {
-                int id = rs.getInt("ID");
-                Timestamp date = rs.getTimestamp("expense_datetime");
-                double sum = rs.getDouble("sum");
-                String cur = rs.getString("cur");
-                String comment = rs.getString("comment");
-                int user = rs.getInt("userID");
-                int targetUserId = rs.getInt("targetUserId");
-                result = new Expense(sum, cur, comment, id, date.toLocalDateTime(), user, targetUserId);
+                if (result == null) {
+                    int id = rs.getInt("exp.ID");
+                    Timestamp date = rs.getTimestamp("exp.expense_datetime");
+                    double sum = rs.getDouble("exp.sum");
+                    String cur = rs.getString("exp.cur");
+                    String comment = rs.getString("exp.comment");
+                    int user = rs.getInt("exp.userID");
+                    int targetUserId = rs.getInt("exp.targetUserId");
+                    result = new Expense(sum, cur, comment, id, date.toLocalDateTime(), user, targetUserId);
+                }
+                int excludedUser = rs.getInt("exp2excl.userID");
+                if (excludedUser != 0) result.getExcludedUsers().add(excludedUser);
             }
             rs.close();
             st.close();

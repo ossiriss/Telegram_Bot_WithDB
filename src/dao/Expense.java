@@ -1,7 +1,9 @@
 package dao;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 
 /**
  * Created by Boris on 26-Sep-16.
@@ -14,6 +16,11 @@ public class Expense implements Comparable<Expense>{
     private int id;
     private int userID;
     private int targetUserId;
+    private HashSet<Integer> excludedUsers;
+
+    public Expense(int id) {
+        this.id = id;
+    }
 
     public Expense(double sum, String currency, String description, int id, LocalDateTime date, int userID, int targetUserId) {
         this.sum = sum;
@@ -23,6 +30,15 @@ public class Expense implements Comparable<Expense>{
         this.id = id;
         this.userID = userID;
         this.targetUserId = targetUserId;
+        excludedUsers = new HashSet<Integer>();
+    }
+
+    public void addExcludedUser(int userID){
+        excludedUsers.add(userID);
+    }
+
+    public HashSet<Integer> getExcludedUsers() {
+        return excludedUsers;
     }
 
     public int getTargetUserId() {

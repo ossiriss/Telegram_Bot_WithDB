@@ -22,7 +22,7 @@ public class HttpHelper {
             }
         }
 
-        String url = "http://xe.com/currencyconverter/convert/?Amount=1&From=" + from + "&To=" + to;
+        String url = "https://xe.com/currencyconverter/convert/?Amount=1&From=" + from + "&To=" + to;
 
         try {
             URL obj = new URL(url);
@@ -57,7 +57,7 @@ public class HttpHelper {
 
             return rate * amount;
         } catch (IOException e) {
-            throw new IOException("can't get exchange rate from xc.com");
+            throw new IOException("can't get exchange rate from xe.com");
         } catch (NumberFormatException e){
             throw new NumberFormatException("probably xc.com doesn't have exchange rate for this currency");
         }

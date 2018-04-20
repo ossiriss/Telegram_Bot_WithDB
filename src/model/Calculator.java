@@ -71,12 +71,20 @@ public class Calculator {
                         t = getTravelerByID(travelers, t.getSponsorID());
                     }
                     perTraveler.put(t, e.getSum() + perTraveler.get(t));
-                    if (e.getTargetUserId() == 0) {
-                        totalForEach += e.getSum();
-                    }else {
+                    if (e.getTargetUserId() != 0) {
                         Traveler trav = getTravelerByID(travelers, e.getTargetUserId());
                         if (trav.getSponsorID() != 0) trav = getTravelerByID(travelers, trav.getSponsorID());
                         perTraveler.put(trav, perTraveler.get(trav) - e.getSum());
+                    }else if(!e.getExcludedUsers().isEmpty()){ //calculate for expenses with excluded travelers
+                        int travelersForExpense = travelers.size() - e.getExcludedUsers().size();
+                        for (Traveler trav : travelers) {
+                            if (!e.getExcludedUsers().contains(trav.getUserId())){
+                                if (trav.getSponsorID() != 0) trav = getTravelerByID(travelers, trav.getSponsorID());
+                                perTraveler.put(trav, perTraveler.get(trav) - e.getSum()/travelersForExpense);
+                            }
+                        }
+                    }else {
+                        totalForEach += e.getSum();
                     }
                 }
             }
@@ -161,7 +169,7 @@ public class Calculator {
         String result = "Total spent: ";
         HashMap<String, Double> total = new HashMap<String, Double>();
         for (Expense e : expenses.keySet()) {
-            if (e.getTargetUserId() != 0){
+            if (e.getTargetUserId() != 0 || !e.getExcludedUsers().isEmpty()){
                 continue;
             }
             if (total.containsKey(e.getCurrency()))
@@ -170,7 +178,7 @@ public class Calculator {
                 total.put(e.getCurrency(), e.getSum());
         }
         for (Map.Entry<String, Double> entry: total.entrySet()) {
-            result += entry.getValue() + entry.getKey() + ", ";
+            result += Math.round(entry.getValue()*100.)/100. + entry.getKey() + ", ";
             entry.setValue(entry.getValue()/travelers.size());   //we live here "total for each"
         }
         result = result.replaceAll(", $", "");
@@ -187,15 +195,15 @@ public class Calculator {
                 Traveler traveler = entry.getValue();
                 Expense expense = entry.getKey();
                 if (t.equals(traveler)){
-                    if (expense.getTargetUserId() != 0){
-                        if (!total.containsKey(expense.getCurrency())) totalForTraveler.put(expense.getCurrency(), 0.);
-                        totalForTraveler.put(expense.getCurrency(),  totalForTraveler.get(expense.getCurrency()) + expense.getSum());
-                    }else {
-                        totalForTraveler.put(expense.getCurrency(), expense.getSum() + totalForTraveler.get(expense.getCurrency()));
-                    }
+                    if (!totalForTraveler.containsKey(expense.getCurrency())) totalForTraveler.put(expense.getCurrency(), 0.);
+                    totalForTraveler.put(expense.getCurrency(),  totalForTraveler.get(expense.getCurrency()) + expense.getSum());
                 } else if (t.getUserId() == expense.getTargetUserId()){
-                    if (!total.containsKey(expense.getCurrency())) totalForTraveler.put(expense.getCurrency(), 0.);
+                    if (!totalForTraveler.containsKey(expense.getCurrency())) totalForTraveler.put(expense.getCurrency(), 0.);
                     totalForTraveler.put(expense.getCurrency(),  totalForTraveler.get(expense.getCurrency()) - expense.getSum());
+                } else if (!expense.getExcludedUsers().isEmpty() && !expense.getExcludedUsers().contains(t.getUserId())){
+                    if (!totalForTraveler.containsKey(expense.getCurrency())) totalForTraveler.put(expense.getCurrency(), 0.);
+                    double debt = expense.getSum() / (travelers.size() - expense.getExcludedUsers().size());
+                    totalForTraveler.put(expense.getCurrency(),  totalForTraveler.get(expense.getCurrency()) - Math.round(debt*100.)/100.);
                 }
             }
             for (Map.Entry<String, Double> entry: totalForTraveler.entrySet()) {
