@@ -98,7 +98,7 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = credit(userID, chatID, messageText, mentionedUserId);
             else if (messageText.toUpperCase().matches(Command.SHOWFUNDED.toString()))
                 answerText = showFunded(chatID);
-            else if (messageText.toUpperCase().matches(Command.EXCLUDE.toString() + " .+ \\d+"))
+            else if (messageText.toUpperCase().matches(Command.EXCLUDE.toString() + " .+( \\d+|$)"))
                 answerText = exclude(chatID, userID, mentionedUserId, messageText);
             else answerText = "Wrong command";
         } catch (Exception e) {
@@ -120,15 +120,37 @@ public class TravelBot extends TelegramLongPollingBot {
         if (!usersInTrip.contains(mentionedUserId))
             return "Error: target user not found in current trip";
 
-        int expenseID = Integer.parseInt(messageText.substring(messageText.lastIndexOf(' ')+1));
+        int expenseID = -1;
+        try {
+            expenseID = Integer.parseInt(messageText.substring(messageText.lastIndexOf(' ')+1));
+        } catch (NumberFormatException e){
 
-        Expense exp = DBHelper.getExpenseById(expenseID, chatID);
+        }
+
+        Expense exp;
+        if (expenseID > 0){
+            exp = DBHelper.getExpenseById(expenseID, chatID);
+        }else{
+            TreeMap<Expense, Traveler> map = new TreeMap<>(Collections.reverseOrder());
+            map.putAll(DBHelper.getExpensesFromTrip(chatID));
+            exp = map.firstKey();
+            expenseID = exp.getId();
+        }
+
+        if (exp == null){
+            return "Error: expense not found";
+        }
+        if (exp.getTargetUserId() > 0){
+            return "Error: can't exclude from 1to1 credits";
+        }
+        if (exp.getUserID() != userID){
+            return "Error: you can exclude users only from your expenses";
+        }
         if (exp.getExcludedUsers().contains(mentionedUserId)){
             return "Error: target user already excluded from this expense";
         }
 
         DBHelper.addExclude(chatID, mentionedUserId, expenseID);
-
         return "Target user successfully excluded";
     }
 
