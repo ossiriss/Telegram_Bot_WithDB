@@ -256,8 +256,8 @@ public class TravelBot extends TelegramLongPollingBot {
         return "Funding removed successfully";
     }
 
-    private String giveSponsorship(long chatID, int userID, Integer targetUser) throws DBException {
-        if (targetUser == null) return "Wrong command. You should mention user you want to sponsor";
+    private String giveSponsorship(long chatID, int userID, Integer targetUserID) throws DBException {
+        if (targetUserID == null) return "Wrong command. You should mention user you want to sponsor";
         if (!DBHelper.getTripsList().contains(chatID)){
             return "no such trip, you need to enter trip first";
         }
@@ -268,9 +268,10 @@ public class TravelBot extends TelegramLongPollingBot {
             return "Error: Traveler not found in current trip";
 
         //int targetUser = Integer.parseInt(messageText.substring(Command.FUND.toString().length()+1));
-        if (userID == targetUser) return "you can't fund yourself";
+        if (userID == targetUserID) return "you can't fund yourself";
 
-        if (!travelers.contains(user))
+        Traveler targetUser = new Traveler("user", "user", targetUserID);
+        if (!travelers.contains(targetUser))
             return "Error: object of funding not found in current trip";
 
         for (Traveler t : travelers) {
@@ -283,7 +284,7 @@ public class TravelBot extends TelegramLongPollingBot {
             }
         }
 
-        DBHelper.setMerge(chatID, userID, targetUser);
+        DBHelper.setMerge(chatID, userID, targetUserID);
         return "Funding set successfully";
     }
 
