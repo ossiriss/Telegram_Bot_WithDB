@@ -47,15 +47,16 @@ public class TravelBot extends TelegramLongPollingBot {
         if (messageText.substring(0,1).equals("/"))
             messageText = messageText.substring(1);
         else {
-            sendMessage("not a command", message.getChatId().toString());
+            //sendMessage("not a command", message.getChatId().toString());
             return;
         }
-        if (message.getFrom().getLastName() == null){
-            sendMessage("You must have Last Name in telegram to use this bot", message.getChatId().toString());
-            return;
-        }
+//        if (message.getFrom().getLastName() == null){
+//            sendMessage("You must have Last Name in telegram to use this bot", message.getChatId().toString());
+//            return;
+//        }
+        String senderLastName = message.getFrom().getLastName() == null ? " " : message.getFrom().getLastName();
         try {
-            updatePersonalData(userID, message.getFrom().getFirstName(), message.getFrom().getLastName(), message.getFrom().getUserName());
+            updatePersonalData(userID, message.getFrom().getFirstName(), senderLastName, message.getFrom().getUserName());
         } catch (DBException e) {
             e.printStackTrace();
             sendMessage("failed to update user data", message.getChatId().toString());
@@ -67,7 +68,7 @@ public class TravelBot extends TelegramLongPollingBot {
             if (messageText.equalsIgnoreCase(Command.HELP.toString()) || messageText.equalsIgnoreCase(Command.START.toString()))
                 answerText = getHelp();
             else if (messageText.toUpperCase().matches(Command.JUMPIN.toString()))
-                answerText = addTraveler(message.getFrom().getFirstName(), message.getFrom().getLastName(), userID, messageText, chatID, update.getMessage()
+                answerText = addTraveler(message.getFrom().getFirstName(), senderLastName, userID, messageText, chatID, update.getMessage()
                         .getFrom().getUserName());
             else if (messageText.equalsIgnoreCase(Command.GETOUT.toString()))
                 answerText = removeTraveler(userID, chatID);
@@ -86,7 +87,7 @@ public class TravelBot extends TelegramLongPollingBot {
             else if (messageText.toUpperCase().matches(Command.CALCTOTAL.toString()))
                 answerText = calculateTotalExpenses(chatID);
             else if (messageText.toUpperCase().matches(Command.UPDATENAME.toString()))
-                answerText = updatePersonalData(userID, message.getFrom().getFirstName(), message.getFrom().getLastName(), message.getFrom().getUserName());
+                answerText = updatePersonalData(userID, message.getFrom().getFirstName(), senderLastName, message.getFrom().getUserName());
             else if (messageText.toUpperCase().matches(Command.SHOWTRAVELERS.toString()))
                 answerText = showTravelers(chatID);
             else if (messageText.toUpperCase().matches(Command.FUND.toString() + " .+"))
