@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Telegram_Bot_WithDB:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Telegram_Bot_WithDB_jar</output-path>
+    <root id="archive" name="Telegram_Bot_WithDB.jar">
+      <element id="module-output" name="Telegram_Bot_WithDB" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/externalLibs/mysql-connector-java-5.1.39.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/externalLibs/telegrambots-3.3-jar-with-dependencies.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
