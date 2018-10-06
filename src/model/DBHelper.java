@@ -13,6 +13,28 @@ import java.util.HashSet;
  * Created by Boris on 26-Sep-16.
  */
 public class DBHelper {
+    public static void updateExpense(double numAmount, String currency, long tripID, int expenseID) throws DBException {
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "update expenses " +
+                    "set sum = ?, " +
+                    "cur = ? " +
+                    "where ID = ? " +
+                    "and TripID = ?";
+            PreparedStatement preparedStmt = conn.prepareStatement(query);
+
+            preparedStmt.setDouble(1, numAmount);
+            preparedStmt.setString(2, currency);
+            preparedStmt.setInt(3, expenseID);
+            preparedStmt.setLong(4, tripID);
+
+            preparedStmt.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'updateExpense'");
+            throw new DBException("something gone wrong in 'updateExpense'");
+        }
+    }
+
     public static void addExclude(long tripID, int userID, int expenseID) throws DBException{
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "insert into expense2excluded(expenseUK, userID) values ((select UK from expenses where ID = ? and tripID = ?), ?);";

@@ -101,6 +101,8 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = showFunded(chatID);
             else if (messageText.toUpperCase().matches(Command.EXCLUDE.toString() + " .+( \\d+|$)"))
                 answerText = exclude(chatID, userID, mentionedUserId, messageText);
+            else if (messageText.toUpperCase().matches(Command.UPDATE.toString() + " \\d+ \\d+\\.?\\d* ?[A-Z]{3}"))
+                answerText = update(chatID, userID, messageText);
             else answerText = "Wrong command";
         } catch (Exception e) {
             e.printStackTrace();
@@ -108,6 +110,46 @@ public class TravelBot extends TelegramLongPollingBot {
         }
 
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String update(long chatID, int userID, String messageText) throws DBException{
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+
+        ArrayList<Integer> usersInTrip = DBHelper.getUsersInTrip(chatID);
+        if (!usersInTrip.contains(userID))
+            return "Error: Traveler not found in current trip";
+
+        int expenseID = -1;
+        try {
+            int startPosition = Command.UPDATE.toString().length() + 1;
+            expenseID = Integer.parseInt(messageText.substring(startPosition, startPosition + messageText.substring(startPosition).indexOf(' ')));
+        } catch (NumberFormatException e){
+            return "wrong expense id";
+        }
+
+        Expense exp = DBHelper.getExpenseById(expenseID, chatID);
+
+        if (exp == null){
+            return "Error: expense not found";
+        }
+        if (exp.getUserID() != userID){
+            return "Error: you can update only your expenses";
+        }
+
+        int startPosition = indexOf(Pattern.compile("\\d+\\.?\\d* ?[A-Za-z]{3}"), messageText);
+        String amount = messageText.substring(startPosition, startPosition + indexOf(Pattern.compile("[A-Za-z]{3}"), messageText.substring(startPosition)));
+        double numAmount = Double.parseDouble(amount);
+        if (numAmount < 0.01) return "too small amount";
+        numAmount = Math.round(numAmount*100.)/100.;
+        int commandAmountLength = startPosition + amount.length();
+        String currency = messageText.substring(commandAmountLength, commandAmountLength+3).toUpperCase();
+
+        if (currency.equals("RUR")) currency = "RUB";
+
+        DBHelper.updateExpense(numAmount, currency, chatID, expenseID);
+        return "expense id " + expenseID + " was successfully updated";
     }
 
     private String exclude(long chatID, int userID, Integer mentionedUserId, String messageText) throws DBException{
@@ -122,16 +164,17 @@ public class TravelBot extends TelegramLongPollingBot {
             return "Error: target user not found in current trip";
 
         int expenseID = -1;
+        boolean lastExpense = false;
         try {
             expenseID = Integer.parseInt(messageText.substring(messageText.lastIndexOf(' ')+1));
         } catch (NumberFormatException e){
-
         }
 
         Expense exp;
         if (expenseID > 0){
             exp = DBHelper.getExpenseById(expenseID, chatID);
         }else{
+            lastExpense = true;
             TreeMap<Expense, Traveler> map = new TreeMap<>(Collections.reverseOrder());
             map.putAll(DBHelper.getExpensesFromTrip(chatID));
             exp = map.firstKey();
@@ -152,7 +195,11 @@ public class TravelBot extends TelegramLongPollingBot {
         }
 
         DBHelper.addExclude(chatID, mentionedUserId, expenseID);
-        return "Target user successfully excluded";
+        if (lastExpense){
+            return "Target user successfully excluded from last expense";
+        }else {
+            return "Target user successfully excluded from expense id " + expenseID;
+        }
     }
 
     private String showFunded(long chatID) throws DBException{
@@ -199,7 +246,7 @@ public class TravelBot extends TelegramLongPollingBot {
         int startPosition = indexOf(Pattern.compile("\\d+\\.?\\d* ?[A-Za-z]{3}"), messageText);
         String amount = messageText.substring(startPosition, startPosition + indexOf(Pattern.compile("[A-Za-z]{3}"), messageText.substring(startPosition)));
         double numAmount = Double.parseDouble(amount);
-        if (numAmount < 0.01) return "to small amount";
+        if (numAmount < 0.01) return "too small amount";
         numAmount = Math.round(numAmount*100.)/100.;
         int commandAmountLength = startPosition + amount.length();
         String currency = messageText.substring(commandAmountLength, commandAmountLength+3).toUpperCase();
@@ -511,7 +558,8 @@ public class TravelBot extends TelegramLongPollingBot {
         message += "/FUND 'user mention' - become sponsor for a traveler(expenses merged in '/calc')\n";
         message += "/DELFUND 'user mention' - stop sponsorship(unMerge)\n";
         message += "/SHOWFUNDED - show funded users list\n";
-        message += "/EXCLUDE 'user mention' 'expense id' - exclude user from expense\n";
+        message += "/EXCLUDE 'user mention' 'expense id' - exclude user from expense. Expense id - optional\n";
+        message += "/UPDATE 'expense id' 'amount''currency'";
 
         return message;
     }

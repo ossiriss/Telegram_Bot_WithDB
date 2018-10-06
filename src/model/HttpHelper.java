@@ -67,7 +67,7 @@ public class HttpHelper {
 //    }
 
     public static double convertCurrency(double amount, String from, String to) throws Exception{
-        Date validityDate = new Date(System.currentTimeMillis() - (30 * 60 * 1000));
+        Date validityDate = new Date(System.currentTimeMillis() - (60 * 60 * 1000));
 
         if (cash.containsKey(from+to)) {
             if (cash.get(from + to).y.after(validityDate)) {
