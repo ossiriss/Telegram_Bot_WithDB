@@ -3,9 +3,6 @@ package my_bots;
 import dao.Expense;
 import dao.Traveler;
 import model.*;
-import org.telegram.telegrambots.Constants;
-import org.telegram.telegrambots.api.methods.groupadministration.GetChatMember;
-import org.telegram.telegrambots.api.objects.ChatMember;
 import org.telegram.telegrambots.api.objects.MessageEntity;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
@@ -13,7 +10,6 @@ import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
-import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -103,6 +99,8 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = exclude(chatID, userID, mentionedUserId, messageText);
             else if (messageText.toUpperCase().matches(Command.UPDATE.toString() + " \\d+ \\d+\\.?\\d* ?[A-Z]{3}"))
                 answerText = update(chatID, userID, messageText);
+            else if (messageText.toUpperCase().matches(Command.CALCTOTALAVERAGE.toString() + " [A-Z]{3}"))
+                answerText = getTotalAverageInCurrency(chatID, messageText);
             else answerText = "Wrong command";
         } catch (Exception e) {
             e.printStackTrace();
@@ -110,6 +108,24 @@ public class TravelBot extends TelegramLongPollingBot {
         }
 
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String getTotalAverageInCurrency(long chatID, String messageText) throws Exception{
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+        TreeMap<Expense, Traveler> map = new TreeMap<>(Collections.reverseOrder());
+        map.putAll(DBHelper.getExpensesFromTrip(chatID));
+
+        if (map.isEmpty()){
+            return "Error: no expenses in current trip";
+        }
+
+        int commandLength = Command.CALCTOTALAVERAGE.toString().length() + 1;
+        String currency = messageText.substring(commandLength, commandLength+3).toUpperCase();
+        if (currency.equals("RUR")) currency = "RUB";
+
+        return Calculator.getTotalAverageInCurrency(map, DBHelper.getTravelers(chatID), currency);
     }
 
     private String update(long chatID, int userID, String messageText) throws DBException{
@@ -263,10 +279,10 @@ public class TravelBot extends TelegramLongPollingBot {
             if (t.getUserId() == userID) userName = t.getFirstName();
             if (t.getUserId() == mentionedUserId) targetUserName = t.getFirstName();
         }
-        DBHelper.addExpense(numAmount, currency, comment, userID, chatID, mentionedUserId);
+        int newID = DBHelper.addExpense(numAmount, currency, comment, userID, chatID, mentionedUserId);
 
 
-        return "expense confirmed: " + userName + " gave " + numAmount + " " + currency + " to " + targetUserName;
+        return "expense " + newID + " confirmed: " + userName + " gave " + numAmount + " " + currency + " to " + targetUserName;
     }
 
     private Integer getMentionedUserId(Message message) throws Exception{
@@ -505,9 +521,9 @@ public class TravelBot extends TelegramLongPollingBot {
 
         if (currency.equals("RUR")) currency = "RUB";
 
-        DBHelper.addExpense(numAmount, currency, comment, userID, chatID, 0);
+        int newID = DBHelper.addExpense(numAmount, currency, comment, userID, chatID, 0);
 
-        return "expense confirmed: " + firstName + " paid " + numAmount + " " + currency;
+        return "expense " + newID + " confirmed: " + firstName + " paid " + numAmount + " " + currency;
     }
 
     private String removeTraveler(int userID, long chatID) throws DBException {
@@ -553,6 +569,7 @@ public class TravelBot extends TelegramLongPollingBot {
         message += "/CALC - show debts for each\n";
         message += "/CALC 'currency' - show debts for each in specific currency\n";
         message += "/CALCTOTAL - show total debts for each\n";
+        message += "/CALCTOTALAVERAGE 'currency' - show average total spent in specific currency\n";
         message += "/UPDATENAME - update your name from your telegram account.\n";
         message += "/SHOWTRAVELERS - show travelers list\n";
         message += "/FUND 'user mention' - become sponsor for a traveler(expenses merged in '/calc')\n";
@@ -560,6 +577,7 @@ public class TravelBot extends TelegramLongPollingBot {
         message += "/SHOWFUNDED - show funded users list\n";
         message += "/EXCLUDE 'user mention' 'expense id' - exclude user from expense. Expense id - optional\n";
         message += "/UPDATE 'expense id' 'amount''currency'";
+
 
         return message;
     }

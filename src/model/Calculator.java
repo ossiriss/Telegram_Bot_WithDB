@@ -220,4 +220,37 @@ public class Calculator {
 
         return result;
     }
+
+    public static String getTotalAverageInCurrency(TreeMap<Expense, Traveler> expenses, Set<Traveler> travelers, String currency) throws Exception{
+        String result = "Average spent for person: ";
+
+        for(Map.Entry<Expense,Traveler> entry : expenses.entrySet()) {
+            Expense expense = entry.getKey();
+            Traveler traveler = entry.getValue();
+
+            if (!expense.getCurrency().equals(currency)){
+                expense.setSum(HttpHelper.convertCurrency(expense.getSum(), expense.getCurrency(), currency));
+                expense.setCurrency(currency);
+            }
+        }
+
+        HashMap<String, Double> total = new HashMap<String, Double>();
+        for (Expense e : expenses.keySet()) {
+            if (e.getTargetUserId() != 0 || !e.getExcludedUsers().isEmpty()){
+                continue;
+            }
+            if (total.containsKey(e.getCurrency()))
+                total.put(e.getCurrency(), e.getSum() + total.get(e.getCurrency()));
+            else
+                total.put(e.getCurrency(), e.getSum());
+        }
+        for (Map.Entry<String, Double> entry: total.entrySet()) {
+            result += Math.round(entry.getValue()/travelers.size()*100.)/100. + entry.getKey() + ", ";
+            entry.setValue(entry.getValue()/travelers.size());
+        }
+        result = result.replaceAll(", $", "");
+        result += "\n";
+
+        return result;
+    }
 }

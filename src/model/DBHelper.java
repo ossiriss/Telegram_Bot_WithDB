@@ -280,9 +280,17 @@ public class DBHelper {
         }
     }
 
-    public static void addExpense(double numAmount, String currency, String comment, int userID, long tripID, int targetUserId) throws DBException {
+    public static int addExpense(double numAmount, String currency, String comment, int userID, long tripID, int targetUserId) throws DBException {
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "insert into expenses(sum, cur, comment, tripID, userID, targetUserId) values(?,?,?,?,?,?)";
+            String query = "select IFNULL(max(ID),0) from expenses where tripID = " + tripID;
+            Statement st = conn.createStatement();
+            ResultSet rs = st.executeQuery(query);
+            int result = -1;
+            if (rs.next()) {
+                result = rs.getInt(1) + 1;
+            }
+
+            query = "insert into expenses(sum, cur, comment, tripID, userID, targetUserId) values(?,?,?,?,?,?)";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
 
             preparedStmt.setDouble(1, numAmount);
@@ -292,6 +300,8 @@ public class DBHelper {
             preparedStmt.setInt(5, userID);
             preparedStmt.setInt(6, targetUserId);
             preparedStmt.execute();
+
+            return result;
         } catch (SQLException e) {
             e.printStackTrace();
             System.out.println("something gone wrong in 'addExpense'");
