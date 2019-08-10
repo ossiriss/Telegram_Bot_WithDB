@@ -7,6 +7,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 public class HttpHelper {
     static private HashMap<String, Tuple<Double, Date>> cash = new HashMap<>();
@@ -42,10 +44,18 @@ public class HttpHelper {
                 throw new NumberFormatException();
             }
 
-            String keyword = "\"val\":";
-            int index = response.indexOf(keyword) + keyword.length();
-            double myRes = Double.parseDouble(response.substring(index, index+8));
-            //double rate = Math.round(myRes*1000)/1000.;
+            String pattern = "\\{\"val\":(\\d+\\.\\d+)\\}";
+
+            // Create a Pattern object
+            Pattern r = Pattern.compile(pattern);
+            double myRes = 0;
+            // Now create matcher object.
+            Matcher m = r.matcher(response);
+            if (m.find( )) {
+                myRes = Double.parseDouble(m.group(1));
+            }else {
+                throw new NumberFormatException();
+            }
 
             cash.put(from + to, new Tuple<>(myRes, new Date(System.currentTimeMillis())));
 
