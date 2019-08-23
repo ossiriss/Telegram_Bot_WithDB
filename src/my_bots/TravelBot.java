@@ -583,14 +583,33 @@ public class TravelBot extends TelegramLongPollingBot {
     }
 
     private boolean sendMessage(String text, String chatId){
-        SendMessage answer = new SendMessage();
-        answer.setChatId(chatId);
-        answer.setText(text);
+        String lines[] = text.split("\\r?\\n");
+        StringBuilder stringBuilder = new StringBuilder("");
+        ArrayList<String> messages = new ArrayList<String>();
+        for (String line : lines) {
+            if (stringBuilder.length() + line.length() > 4094){
+                messages.add(stringBuilder.toString());
+                stringBuilder.setLength(0);
+            }else{
+                stringBuilder.append(line);
+                stringBuilder.append("\n");
+            }
+        }
+        if (stringBuilder.length() > 0){
+            messages.add(stringBuilder.toString());
+        }
 
-        try {
-            sendMessage(answer);
-        } catch (TelegramApiException e) {
-            return false;
+
+        for (String messageText : messages){
+            SendMessage answer = new SendMessage();
+            answer.setChatId(chatId);
+            answer.setText(messageText);
+
+            try {
+                execute(answer);
+            } catch (TelegramApiException e) {
+                return false;
+            }
         }
 
         return true;
