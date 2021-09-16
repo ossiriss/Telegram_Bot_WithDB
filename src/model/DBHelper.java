@@ -212,14 +212,20 @@ public class DBHelper {
     }
 
     public static HashMap<Expense, Traveler> getExpensesFromTrip(long tripId) throws DBException {
+        return getExpensesFromTrip(tripId, false);
+    }
+
+    public static HashMap<Expense, Traveler> getExpensesFromTrip(long tripId, boolean withPaid) throws DBException {
         HashMap<Expense, Traveler> result = new HashMap<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
-            String query = "select e.ID, e.expense_datetime, e.sum, e.cur, e.comment, e.userID, u.Name, u.Surname, u2t.Merge_parent_ID, e.targetUserId, " +
+            String paidString = withPaid ? "" : "and e.paid = 0";
+            String query = "select e.ID, e.expense_datetime, e.sum, e.cur, e.comment, e.userID, u.Name, u.Surname, u2t.Merge_parent_ID, e.targetUserId, e.paid, " +
                     "e2excl.userID " +
                     "from expenses e join users u on e.userID = u.ID_Telegram join users2trips u2t on e.userID = u2t.ID_Telegram and u2t.TripID = e.TripID " +
                     "left join expense2excluded e2excl on e.uk = e2excl.expenseUK where e.TripID = " + tripId +
-                    " and e.deletedFlag = 0 order by e.ID, e2excl.userID";
+                    " and e.deletedFlag = 0 " + paidString +
+                    " order by e.ID, e2excl.userID";
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
             Expense lastExp = new Expense(0);
@@ -240,6 +246,7 @@ public class DBHelper {
                     int mergeParentID = rs.getInt("Merge_parent_ID");
                     int targetUserId = rs.getInt("targetUserId");
                     lastExp = new Expense(sum, cur, comment, id, date.toLocalDateTime(), userID, targetUserId);
+                    lastExp.setPaid(rs.getBoolean("paid"));
                     lastTraveler = new Traveler(name, surname, userID, mergeParentID);
                 }
 
@@ -428,8 +435,58 @@ public class DBHelper {
             preparedStmt.execute();
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("something gone wrong in 'updatePersonalData'");
-            throw new DBException("something gone wrong in 'updatePersonalData'");
+            System.out.println("something gone wrong in 'setMerge'");
+            throw new DBException("something gone wrong in 'setMerge'");
+        }
+    }
+
+    public static void updateChatId(long oldChatID, long newChatID) throws DBException {
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query1 = "update expenses " +
+                    "set TripID = ? " +
+                    "where TripID = ?";
+            PreparedStatement preparedStmt1 = conn.prepareStatement(query1);
+            preparedStmt1.setLong(1, newChatID);
+            preparedStmt1.setLong(2, oldChatID);
+            preparedStmt1.execute();
+
+            String query2 = "update trips " +
+                    "set Telegram_chat_id = ? " +
+                    "where Telegram_chat_id = ?";
+            PreparedStatement preparedStmt2 = conn.prepareStatement(query2);
+            preparedStmt2.setLong(1, newChatID);
+            preparedStmt2.setLong(2, oldChatID);
+            preparedStmt2.execute();
+
+            String query3 = "update users2trips " +
+                    "set TripID = ? " +
+                    "where TripID = ?";
+            PreparedStatement preparedStmt3 = conn.prepareStatement(query3);
+            preparedStmt3.setLong(1, newChatID);
+            preparedStmt3.setLong(2, oldChatID);
+            preparedStmt3.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'updateChatId'");
+            throw new DBException("something gone wrong in 'updateChatId'");
+        }
+    }
+
+    public static void setPaidForTrip(long chatID) throws DBException {
+        try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
+            String query = "update expenses " +
+                    "set paid = 1 " +
+                    "where TripID = ? " +
+                    "and deletedFlag = 0";
+            PreparedStatement preparedStmt = conn.prepareStatement(query);
+
+            preparedStmt.setLong(1, chatID);
+
+            preparedStmt.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("something gone wrong in 'setPaidForTrip'");
+            throw new DBException("something gone wrong in 'setPaidForTrip'");
         }
     }
 }

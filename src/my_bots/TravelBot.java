@@ -21,6 +21,8 @@ import java.util.regex.Pattern;
 public class TravelBot extends TelegramLongPollingBot {
     private static final String emo_regex = "([\\u20a0-\\u32ff\\ud83c\\udc00-\\ud83d\\udeff\\udbb9\\udce5-\\udbb9\\udcee])";
 
+    private final HashMap<Long, ArrayList<Integer>> paidAcceptedDict = new HashMap<>();
+
     @Override
     public String getBotToken() {
         return MyConstants.BOT_TOKEN;
@@ -32,6 +34,17 @@ public class TravelBot extends TelegramLongPollingBot {
         String answerText;
         Message message = update.getMessage();
         long chatID = message.getChat().getId();
+        Long oldChatId = update.getMessage().getMigrateFromChatId();
+        if (oldChatId != null){
+            try {
+                DBHelper.updateChatId(oldChatId,chatID);
+                paidAcceptedDict.put(chatID, paidAcceptedDict.getOrDefault(oldChatId, new ArrayList<>()));
+                sendMessage("chat ID updated", message.getChatId().toString());
+            } catch (DBException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
         String messageText = message.getText();
         //debugging
         System.out.println(messageText);
@@ -50,9 +63,12 @@ public class TravelBot extends TelegramLongPollingBot {
 //            sendMessage("You must have Last Name in telegram to use this bot", message.getChatId().toString());
 //            return;
 //        }
+        String senderFirstName = message.getFrom().getFirstName();
+        senderFirstName = senderFirstName.replaceAll(emo_regex, "_");
         String senderLastName = message.getFrom().getLastName() == null ? " " : message.getFrom().getLastName();
+        senderLastName = senderLastName.replaceAll(emo_regex, "_");
         try {
-            updatePersonalData(userID, message.getFrom().getFirstName(), senderLastName, message.getFrom().getUserName());
+            updatePersonalData(userID, senderFirstName, senderLastName, message.getFrom().getUserName());
         } catch (DBException e) {
             e.printStackTrace();
             sendMessage("failed to update user data", message.getChatId().toString());
@@ -64,13 +80,13 @@ public class TravelBot extends TelegramLongPollingBot {
             if (messageText.equalsIgnoreCase(Command.HELP.toString()) || messageText.equalsIgnoreCase(Command.START.toString()))
                 answerText = getHelp();
             else if (messageText.toUpperCase().matches(Command.JUMPIN.toString()))
-                answerText = addTraveler(message.getFrom().getFirstName(), senderLastName, userID, messageText, chatID, update.getMessage()
+                answerText = addTraveler(senderFirstName, senderLastName, userID, messageText, chatID, update.getMessage()
                         .getFrom().getUserName());
             else if (messageText.equalsIgnoreCase(Command.GETOUT.toString()))
                 answerText = removeTraveler(userID, chatID);
             else if ((messageText.toUpperCase().matches(Command.EXP.toString() + " \\d+\\.?\\d* ?[A-Z]{3}") ||
                     (messageText.toUpperCase().matches(Command.EXP.toString() + " \\d+\\.?\\d* ?[A-Z]{3} .*"))))
-                answerText = expense(userID, chatID, messageText, message.getFrom().getFirstName());
+                answerText = expense(userID, chatID, messageText, senderFirstName);
             else if (messageText.equalsIgnoreCase(Command.SHOWEXP.toString()) || messageText.toUpperCase().matches
                     (Command.SHOWEXP.toString() + " \\d*"))
                 answerText = showExpenses(messageText, chatID);
@@ -83,7 +99,7 @@ public class TravelBot extends TelegramLongPollingBot {
             else if (messageText.toUpperCase().matches(Command.CALCTOTAL.toString()))
                 answerText = calculateTotalExpenses(chatID);
             else if (messageText.toUpperCase().matches(Command.UPDATENAME.toString()))
-                answerText = updatePersonalData(userID, message.getFrom().getFirstName(), senderLastName, message.getFrom().getUserName());
+                answerText = updatePersonalData(userID, senderFirstName, senderLastName, message.getFrom().getUserName());
             else if (messageText.toUpperCase().matches(Command.SHOWTRAVELERS.toString()))
                 answerText = showTravelers(chatID);
             else if (messageText.toUpperCase().matches(Command.FUND.toString() + " .+"))
@@ -101,6 +117,8 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = update(chatID, userID, messageText);
             else if (messageText.toUpperCase().matches(Command.CALCTOTALAVERAGE.toString() + " [A-Z]{3}"))
                 answerText = getTotalAverageInCurrency(chatID, messageText);
+            else if (messageText.toUpperCase().matches(Command.FINALIZE.toString()))
+                answerText = finalize(chatID, userID);
             else answerText = "Wrong command";
         } catch (Exception e) {
             e.printStackTrace();
@@ -108,6 +126,40 @@ public class TravelBot extends TelegramLongPollingBot {
         }
 
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    private String finalize(long chatID, int userID) throws Exception{
+        if (!DBHelper.getTripsList().contains(chatID)){
+            return "no such trip, you need to enter trip first";
+        }
+
+        Traveler tempTraveler = new Traveler("empty", "empty", userID);
+        HashSet<Traveler> travelers = DBHelper.getTravelers(chatID);
+        if (!travelers.contains(tempTraveler))
+            return "Error: Traveler not found in current trip";
+
+        ArrayList<Integer> acceptedUsers = paidAcceptedDict.getOrDefault(chatID, new ArrayList<>());
+        acceptedUsers.add(userID);
+
+        if (acceptedUsers.size() == travelers.size()){
+            DBHelper.setPaidForTrip(chatID);
+            paidAcceptedDict.put(chatID, new ArrayList<Integer>());
+            return "All expenses finalized successfully";
+        }else{
+            paidAcceptedDict.put(chatID, acceptedUsers);
+            String reply = "Finalize confirmed, waiting for ";
+
+            for (Traveler traveler : travelers){
+                if (!acceptedUsers.contains(traveler.getUserId())){
+                    reply = reply + traveler.getFirstName() + ", ";
+                }
+            }
+
+            reply = reply.substring(0, reply.length() - 2);
+
+            return  reply;
+        }
+
     }
 
     private String getTotalAverageInCurrency(long chatID, String messageText) throws Exception{
@@ -281,6 +333,7 @@ public class TravelBot extends TelegramLongPollingBot {
         }
         int newID = DBHelper.addExpense(numAmount, currency, comment, userID, chatID, mentionedUserId);
 
+        paidAcceptedDict.put(chatID, new ArrayList<Integer>());
 
         return "expense " + newID + " confirmed: " + userName + " gave " + numAmount + " " + currency + " to " + targetUserName;
     }
@@ -366,10 +419,10 @@ public class TravelBot extends TelegramLongPollingBot {
     }
 
     private String updatePersonalData(int userID, String fname, String lname, String uName) throws DBException {
-        Matcher matcher = Pattern.compile(emo_regex).matcher(fname+lname);
-        while (matcher.find()) {
-            return "Retards with emoji characters inside name or surname can't use this bot!";
-        }
+//        Matcher matcher = Pattern.compile(emo_regex).matcher(fname+lname);
+//        while (matcher.find()) {
+//            return "Retards with emoji characters inside name or surname can't use this bot!";
+//        }
 
         DBHelper.updatePersonalData(userID, fname, lname, uName);
         return "Data updated successfully";
@@ -440,7 +493,7 @@ public class TravelBot extends TelegramLongPollingBot {
         }
 
         TreeMap<Expense, Traveler> map = new TreeMap<>(Collections.reverseOrder());
-        map.putAll(DBHelper.getExpensesFromTrip(chatID));
+        map.putAll(DBHelper.getExpensesFromTrip(chatID, true));
 
         if (map.isEmpty()){
             return "Error: no expenses in current trip";
@@ -455,10 +508,16 @@ public class TravelBot extends TelegramLongPollingBot {
         DateTimeFormatter onlyDate = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         String sDate = null;
 
+        boolean passedPaid = false;
         Iterator entries = map.entrySet().iterator();
         while (entries.hasNext()) {
             Map.Entry<Expense, Traveler> thisEntry = (Map.Entry)entries.next();
             Expense expense = thisEntry.getKey(); Traveler traveler = thisEntry.getValue();
+
+            if (!passedPaid && expense.isPaid()){
+                answer = "\n-----------↑ Paid ↑----------" + answer;
+                passedPaid = true;
+            }
 
             if (sDate != null && !sDate.equals(expense.getDate().format(onlyDate))) {
 
@@ -523,6 +582,7 @@ public class TravelBot extends TelegramLongPollingBot {
 
         int newID = DBHelper.addExpense(numAmount, currency, comment, userID, chatID, 0);
 
+        paidAcceptedDict.put(chatID, new ArrayList<Integer>());
         return "expense " + newID + " confirmed: " + firstName + " paid " + numAmount + " " + currency;
     }
 
@@ -576,7 +636,8 @@ public class TravelBot extends TelegramLongPollingBot {
         message += "/DELFUND 'user mention' - stop sponsorship(unMerge)\n";
         message += "/SHOWFUNDED - show funded users list\n";
         message += "/EXCLUDE 'user mention' 'expense id' - exclude user from expense. Expense id - optional\n";
-        message += "/UPDATE 'expense id' 'amount''currency'";
+        message += "/UPDATE 'expense id' 'amount''currency'\n";
+        message += "/FINALIZE - accept to finalize current expenses";
 
 
         return message;

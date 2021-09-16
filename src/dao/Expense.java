@@ -17,6 +17,7 @@ public class Expense implements Comparable<Expense>{
     private int userID;
     private int targetUserId;
     private HashSet<Integer> excludedUsers;
+    private boolean paid;
 
     public Expense(int id) {
         this.id = id;
@@ -127,5 +128,13 @@ public class Expense implements Comparable<Expense>{
 
     public void setCurrency(String currency) {
         this.currency = currency;
+    }
+
+    public boolean isPaid() {
+        return paid;
+    }
+
+    public void setPaid(boolean paid) {
+        this.paid = paid;
     }
 }
