@@ -651,10 +651,9 @@ public class TravelBot extends TelegramLongPollingBot {
             if (stringBuilder.length() + line.length() > 4094){
                 messages.add(stringBuilder.toString());
                 stringBuilder.setLength(0);
-            }else{
-                stringBuilder.append(line);
-                stringBuilder.append("\n");
             }
+            stringBuilder.append(line);
+            stringBuilder.append("\n");
         }
         if (stringBuilder.length() > 0){
             messages.add(stringBuilder.toString());
