@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 public class TravelBot extends TelegramLongPollingBot {
     private static final String emo_regex = "([\\u20a0-\\u32ff\\ud83c\\udc00-\\ud83d\\udeff\\udbb9\\udce5-\\udbb9\\udcee])";
 
-    private final HashMap<Long, ArrayList<Integer>> paidAcceptedDict = new HashMap<>();
+    private final HashMap<Long, HashSet<Integer>> paidAcceptedDict = new HashMap<>();
 
     @Override
     public String getBotToken() {
@@ -38,7 +38,7 @@ public class TravelBot extends TelegramLongPollingBot {
         if (oldChatId != null){
             try {
                 DBHelper.updateChatId(oldChatId,chatID);
-                paidAcceptedDict.put(chatID, paidAcceptedDict.getOrDefault(oldChatId, new ArrayList<>()));
+                paidAcceptedDict.put(chatID, paidAcceptedDict.getOrDefault(oldChatId, new HashSet<>()));
                 sendMessage("chat ID updated", message.getChatId().toString());
             } catch (DBException e) {
                 e.printStackTrace();
@@ -138,12 +138,12 @@ public class TravelBot extends TelegramLongPollingBot {
         if (!travelers.contains(tempTraveler))
             return "Error: Traveler not found in current trip";
 
-        ArrayList<Integer> acceptedUsers = paidAcceptedDict.getOrDefault(chatID, new ArrayList<>());
+        HashSet<Integer> acceptedUsers = paidAcceptedDict.getOrDefault(chatID, new HashSet<>());
         acceptedUsers.add(userID);
 
         if (acceptedUsers.size() == travelers.size()){
             DBHelper.setPaidForTrip(chatID);
-            paidAcceptedDict.put(chatID, new ArrayList<Integer>());
+            paidAcceptedDict.put(chatID, new HashSet<Integer>());
             return "All expenses finalized successfully";
         }else{
             paidAcceptedDict.put(chatID, acceptedUsers);
@@ -333,7 +333,7 @@ public class TravelBot extends TelegramLongPollingBot {
         }
         int newID = DBHelper.addExpense(numAmount, currency, comment, userID, chatID, mentionedUserId);
 
-        paidAcceptedDict.put(chatID, new ArrayList<Integer>());
+        paidAcceptedDict.put(chatID, new HashSet<Integer>());
 
         return "expense " + newID + " confirmed: " + userName + " gave " + numAmount + " " + currency + " to " + targetUserName;
     }
@@ -582,7 +582,7 @@ public class TravelBot extends TelegramLongPollingBot {
 
         int newID = DBHelper.addExpense(numAmount, currency, comment, userID, chatID, 0);
 
-        paidAcceptedDict.put(chatID, new ArrayList<Integer>());
+        paidAcceptedDict.put(chatID, new HashSet<Integer>());
         return "expense " + newID + " confirmed: " + firstName + " paid " + numAmount + " " + currency;
     }
 
