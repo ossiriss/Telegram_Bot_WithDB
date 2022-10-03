@@ -14,16 +14,16 @@ public class Expense implements Comparable<Expense>{
     private String description;
     private LocalDateTime date;
     private int id;
-    private int userID;
-    private int targetUserId;
-    private HashSet<Integer> excludedUsers;
+    private long userID;
+    private long targetUserId;
+    private HashSet<Long> excludedUsers;
     private boolean paid;
 
     public Expense(int id) {
         this.id = id;
     }
 
-    public Expense(double sum, String currency, String description, int id, LocalDateTime date, int userID, int targetUserId) {
+    public Expense(double sum, String currency, String description, int id, LocalDateTime date, long userID, long targetUserId) {
         this.sum = sum;
         this.currency = currency;
         this.description = description;
@@ -31,22 +31,22 @@ public class Expense implements Comparable<Expense>{
         this.id = id;
         this.userID = userID;
         this.targetUserId = targetUserId;
-        excludedUsers = new HashSet<Integer>();
+        excludedUsers = new HashSet<Long>();
     }
 
-    public void addExcludedUser(int userID){
+    public void addExcludedUser(long userID){
         excludedUsers.add(userID);
     }
 
-    public HashSet<Integer> getExcludedUsers() {
+    public HashSet<Long> getExcludedUsers() {
         return excludedUsers;
     }
 
-    public int getTargetUserId() {
+    public long getTargetUserId() {
         return targetUserId;
     }
 
-    public int getUserID() {
+    public long getUserID() {
         return userID;
     }
 
@@ -88,7 +88,7 @@ public class Expense implements Comparable<Expense>{
 
     @Override
     public int hashCode() {
-        int result;
+        long result;
         long temp;
         temp = Double.doubleToLongBits(sum);
         result = (int) (temp ^ (temp >>> 32));
@@ -97,7 +97,7 @@ public class Expense implements Comparable<Expense>{
         result = 31 * result + (date != null ? date.hashCode() : 0);
         result = 31 * result + id;
         result = 31 * result + userID;
-        return result;
+        return Long.hashCode(result);
     }
 
     @Override

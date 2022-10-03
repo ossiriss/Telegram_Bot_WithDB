@@ -11,7 +11,7 @@ import java.util.*;
  */
 public class Calculator {
 
-    private static Traveler getTravelerByID(Set<Traveler> travelers, int id){
+    private static Traveler getTravelerByID(Set<Traveler> travelers, long id){
         Traveler sponsor = new Traveler("sponsor", "sponsor", id);
         for (Traveler trav:travelers ) {
             if (trav.equals(sponsor)){

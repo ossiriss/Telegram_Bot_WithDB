@@ -6,17 +6,17 @@ package dao;
 public class Traveler {
     private String firstName;
     private String lastName;
-    private int userId;
-    private int sponsorID;
+    private long userId;
+    private long sponsorID;
     private int weight = 1;
 
-    public Traveler(String firstName, String lastName, int userId) {
+    public Traveler(String firstName, String lastName, long userId) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.userId = userId;
     }
 
-    public Traveler(String firstName, String lastName, int userId, int sponsorID) {
+    public Traveler(String firstName, String lastName, long userId, long sponsorID) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.userId = userId;
@@ -31,7 +31,7 @@ public class Traveler {
         return ++weight;
     }
 
-    public int getSponsorID() {
+    public long getSponsorID() {
         return sponsorID;
     }
 
@@ -43,7 +43,7 @@ public class Traveler {
         return lastName;
     }
 
-    public int getUserId() {
+    public long getUserId() {
         return userId;
     }
 
@@ -60,6 +60,6 @@ public class Traveler {
 
     @Override
     public int hashCode() {
-        return userId;
+        return Long.hashCode(userId);
     }
 }

@@ -35,14 +35,14 @@ public class DBHelper {
         }
     }
 
-    public static void addExclude(long tripID, int userID, int expenseID) throws DBException{
+    public static void addExclude(long tripID, long userID, int expenseID) throws DBException{
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "insert into expense2excluded(expenseUK, userID) values ((select UK from expenses where ID = ? and tripID = ?), ?);";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
 
             preparedStmt.setInt(1, expenseID);
             preparedStmt.setLong(2, tripID);
-            preparedStmt.setInt(3, userID);
+            preparedStmt.setLong(3, userID);
 
             preparedStmt.execute();
         } catch (SQLException e) {
@@ -52,7 +52,7 @@ public class DBHelper {
         }
     }
 
-    public static Traveler getTravelerByUserID(int userId) throws Exception{
+    public static Traveler getTravelerByUserID(long userId) throws Exception{
         Traveler result = null;
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "select Name, Surname from users where ID_Telegram = '" + userId + "'";
@@ -73,14 +73,14 @@ public class DBHelper {
         return result;
     }
 
-    public static int getUserIdByUsername(String userName) throws Exception{
-        Integer result = null;
+    public static long getUserIdByUsername(String userName) throws Exception{
+        Long result = null;
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "select ID_Telegram from users where Username = '" + userName + "'";
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
             if (rs.next()) {
-                result = rs.getInt("ID_Telegram");
+                result = rs.getLong("ID_Telegram");
             }
             rs.close();
             st.close();
@@ -94,15 +94,15 @@ public class DBHelper {
         return result;
     }
 
-    public static ArrayList<Integer> getUsersList() throws DBException{
-        ArrayList<Integer> result = new ArrayList<>();
+    public static ArrayList<Long> getUsersList() throws DBException{
+        ArrayList<Long> result = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "select ID_Telegram from users";
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
             while (rs.next()) {
-                int id = rs.getInt("ID_Telegram");
+                long id = rs.getLong("ID_Telegram");
                 result.add(id);
             }
             rs.close();
@@ -116,12 +116,12 @@ public class DBHelper {
         return result;
     }
 
-    public static void addUser(int userId, String name, String surname, String uName) throws DBException{
+    public static void addUser(long userId, String name, String surname, String uName) throws DBException{
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "insert into users(ID_Telegram, Name, Surname, Username) values(?,?,?,?)";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
 
-            preparedStmt.setInt(1, userId);
+            preparedStmt.setLong(1, userId);
             preparedStmt.setString(2, name);
             preparedStmt.setString(3, surname);
             preparedStmt.setString(4, uName);
@@ -134,14 +134,14 @@ public class DBHelper {
         }
     }
 
-    public static void createTrip(long chatId, int creatorId) throws DBException{
+    public static void createTrip(long chatId, long creatorId) throws DBException{
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "insert into trips(Telegram_chat_id, createDate, Creator_ID) values(?,?,?)";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
 
             preparedStmt.setLong(1, chatId);
             preparedStmt.setDate(2, new java.sql.Date(Calendar.getInstance().getTimeInMillis()));
-            preparedStmt.setInt(3, creatorId);
+            preparedStmt.setLong(3, creatorId);
 
             preparedStmt.execute();
         } catch (SQLException e) {
@@ -173,15 +173,15 @@ public class DBHelper {
         return result;
     }
 
-    public static ArrayList<Integer> getUsersInTrip(long tripId) throws DBException {
-        ArrayList<Integer> result = new ArrayList<>();
+    public static ArrayList<Long> getUsersInTrip(long tripId) throws DBException {
+        ArrayList<Long> result = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "select ID_Telegram from users2trips where TripID = " + tripId + "  and deletedFlag = 0";
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
             while (rs.next()) {
-                int id = rs.getInt("ID_Telegram");
+                long id = rs.getLong("ID_Telegram");
                 result.add(id);
             }
             rs.close();
@@ -195,12 +195,12 @@ public class DBHelper {
         return result;
     }
 
-    public static void addUserToTrip(int userId, long tripId) throws DBException {
+    public static void addUserToTrip(long userId, long tripId) throws DBException {
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "insert into users2trips(ID_Telegram, TripID) values(?,?)";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
 
-            preparedStmt.setInt(1, userId);
+            preparedStmt.setLong(1, userId);
             preparedStmt.setLong(2, tripId);
 
             preparedStmt.execute();
@@ -240,17 +240,17 @@ public class DBHelper {
                     double sum = rs.getDouble("sum");
                     String cur = rs.getString("cur");
                     String comment = rs.getString("comment");
-                    int userID = rs.getInt("e.userID");
+                    long userID = rs.getLong("e.userID");
                     String name = rs.getString("Name");
                     String surname = rs.getString("Surname");
-                    int mergeParentID = rs.getInt("Merge_parent_ID");
-                    int targetUserId = rs.getInt("targetUserId");
+                    long mergeParentID = rs.getLong("Merge_parent_ID");
+                    long targetUserId = rs.getLong("targetUserId");
                     lastExp = new Expense(sum, cur, comment, id, date.toLocalDateTime(), userID, targetUserId);
                     lastExp.setPaid(rs.getBoolean("paid"));
                     lastTraveler = new Traveler(name, surname, userID, mergeParentID);
                 }
 
-                int excludedUser = rs.getInt("e2excl.userID");
+                long excludedUser = rs.getLong("e2excl.userID");
                 if (excludedUser != 0) lastExp.getExcludedUsers().add(excludedUser);
             }
 
@@ -268,7 +268,7 @@ public class DBHelper {
         return result;
     }
 
-    public static void removeUserFromTrip(int userId, long tripId) throws DBException {
+    public static void removeUserFromTrip(long userId, long tripId) throws DBException {
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "update users2trips " +
                     "set deletedFlag = 1 " +
@@ -276,7 +276,7 @@ public class DBHelper {
                     "and TripID = ?";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
 
-            preparedStmt.setInt(1, userId);
+            preparedStmt.setLong(1, userId);
             preparedStmt.setLong(2, tripId);
 
             preparedStmt.execute();
@@ -287,7 +287,7 @@ public class DBHelper {
         }
     }
 
-    public static int addExpense(double numAmount, String currency, String comment, int userID, long tripID, int targetUserId) throws DBException {
+    public static int addExpense(double numAmount, String currency, String comment, long userID, long tripID, long targetUserId) throws DBException {
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "select IFNULL(max(ID),0) from expenses where tripID = " + tripID;
             Statement st = conn.createStatement();
@@ -304,8 +304,8 @@ public class DBHelper {
             preparedStmt.setString(2, currency);
             preparedStmt.setString(3, comment);
             preparedStmt.setLong(4, tripID);
-            preparedStmt.setInt(5, userID);
-            preparedStmt.setInt(6, targetUserId);
+            preparedStmt.setLong(5, userID);
+            preparedStmt.setLong(6, targetUserId);
             preparedStmt.execute();
 
             return result;
@@ -334,11 +334,11 @@ public class DBHelper {
                     double sum = rs.getDouble("exp.sum");
                     String cur = rs.getString("exp.cur");
                     String comment = rs.getString("exp.comment");
-                    int user = rs.getInt("exp.userID");
-                    int targetUserId = rs.getInt("exp.targetUserId");
+                    long user = rs.getLong("exp.userID");
+                    long targetUserId = rs.getLong("exp.targetUserId");
                     result = new Expense(sum, cur, comment, id, date.toLocalDateTime(), user, targetUserId);
                 }
-                int excludedUser = rs.getInt("exp2excl.userID");
+                long excludedUser = rs.getLong("exp2excl.userID");
                 if (excludedUser != 0) result.getExcludedUsers().add(excludedUser);
             }
             rs.close();
@@ -371,7 +371,7 @@ public class DBHelper {
         }
     }
 
-    public static void updatePersonalData(int userID, String fname, String lname, String uName) throws DBException {
+    public static void updatePersonalData(long userID, String fname, String lname, String uName) throws DBException {
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "update users " +
                     "set Name = ?, surname = ?, username = ? " +
@@ -381,7 +381,7 @@ public class DBHelper {
             preparedStmt.setString(1, fname);
             preparedStmt.setString(2, lname);
             preparedStmt.setString(3, uName);
-            preparedStmt.setInt(4, userID);
+            preparedStmt.setLong(4, userID);
 
             preparedStmt.execute();
         } catch (SQLException e) {
@@ -402,10 +402,10 @@ public class DBHelper {
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(query);
             while (rs.next()) {
-                int id = rs.getInt("ID_Telegram");
+                long id = rs.getLong("ID_Telegram");
                 String name = rs.getString("Name");
                 String surname = rs.getString("Surname");
-                int mergeParentID = rs.getInt("Merge_parent_ID");
+                long mergeParentID = rs.getLong("Merge_parent_ID");
                 result.add(new Traveler(name, surname, id, mergeParentID));
             }
             rs.close();
@@ -419,7 +419,7 @@ public class DBHelper {
         return result;
     }
 
-    public static void setMerge(long chatID, int userID, int targetUser) throws DBException {
+    public static void setMerge(long chatID, long userID, long targetUser) throws DBException {
         try (Connection conn = DriverManager.getConnection(MyConstants.DB_url, MyConstants.DB_username, MyConstants.DB_password)) {
             String query = "update users2trips " +
                     "set Merge_parent_ID = ? " +
@@ -428,8 +428,8 @@ public class DBHelper {
                     "and deletedFlag = 0";
             PreparedStatement preparedStmt = conn.prepareStatement(query);
 
-            preparedStmt.setInt(1, userID);
-            preparedStmt.setInt(2, targetUser);
+            preparedStmt.setLong(1, userID);
+            preparedStmt.setLong(2, targetUser);
             preparedStmt.setLong(3, chatID);
 
             preparedStmt.execute();
