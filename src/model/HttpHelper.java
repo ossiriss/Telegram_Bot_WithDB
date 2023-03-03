@@ -1,5 +1,7 @@
 package model;
 
+import my_bots.TravelBot;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -24,7 +26,7 @@ public class HttpHelper {
             }
         }
 
-        String url = "http://free.currencyconverterapi.com/api/v5/convert?q="+ from +"_"+ to + "&compact=y&apiKey=" + MyConstants.CurrencyConverterApiKey;
+        String url = "http://free.currencyconverterapi.com/api/v5/convert?q="+ from +"_"+ to + "&compact=y&apiKey=" + TravelBot.getCurrencyToken();
 
         try {
             URL obj = new URL(url);

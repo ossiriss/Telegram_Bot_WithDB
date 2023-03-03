@@ -10,6 +10,10 @@ import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -20,6 +24,8 @@ import java.util.regex.Pattern;
  */
 public class TravelBot extends TelegramLongPollingBot {
     private static final String emo_regex = "([\\u20a0-\\u32ff\\ud83c\\udc00-\\ud83d\\udeff\\udbb9\\udce5-\\udbb9\\udcee])";
+
+    private static String currencyToken;
 
     private final HashMap<Long, HashSet<Long>> paidAcceptedDict = new HashMap<>();
 
@@ -119,6 +125,8 @@ public class TravelBot extends TelegramLongPollingBot {
                 answerText = getTotalAverageInCurrency(chatID, messageText);
             else if (messageText.toUpperCase().matches(Command.FINALIZE.toString()))
                 answerText = finalize(chatID, userID);
+            else if (messageText.toUpperCase().matches(Command.UPDATETOKEN.toString() + " .+"))
+                answerText = updateCurrencyToken(messageText.split(" ")[1]);
             else answerText = "Wrong command";
         } catch (Exception e) {
             e.printStackTrace();
@@ -126,6 +134,24 @@ public class TravelBot extends TelegramLongPollingBot {
         }
 
         sendMessage(answerText, message.getChatId().toString());
+    }
+
+    public static String getCurrencyToken() throws IOException {
+        if (currencyToken == null){
+            byte[] encoded = Files.readAllBytes(Paths.get("currencyToken.txt"));
+            currencyToken = new String(encoded, StandardCharsets.UTF_8);
+        }
+
+        return currencyToken;
+    }
+
+    private String updateCurrencyToken(String token) throws FileNotFoundException, UnsupportedEncodingException {
+        PrintWriter writer = new PrintWriter("currencyToken.txt", "UTF-8");
+        writer.println(token);
+        writer.close();
+        currencyToken = token;
+
+        return "currency token updated successfully";
     }
 
     private String finalize(long chatID, long userID) throws Exception{
