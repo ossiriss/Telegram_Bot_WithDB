@@ -4,7 +4,7 @@
     <root id="archive" name="Telegram_Bot_WithDB.jar">
       <element id="module-output" name="Telegram_Bot_WithDB" />
       <element id="extracted-dir" path="$PROJECT_DIR$/externalLibs/mysql-connector-java-5.1.39.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$PROJECT_DIR$/externalLibs/telegrambots-3.3-jar-with-dependencies.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/externalLibs/telegrambots-6.1.0-jar-with-dependencies.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>
